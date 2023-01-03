@@ -106,6 +106,7 @@ func GetFileMetaHander(w http.ResponseWriter, r *http.Request) {
 
 }
 
+// 文件下载
 func DownFileHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	filehash := r.Form.Get("filehash")
@@ -135,5 +136,58 @@ func DownFileHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Dispositon", fmt.Sprintf("attachment; filename*=utf-8''%s", url.QueryEscape(fm.FileName)))
 
 	w.Write(data)
+
+}
+
+// 更新fm 元数据
+func FmUpdateHandler(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	fileHash := r.Form.Get("filehash")
+	opType := r.Form.Get("op")
+	newFileName := r.Form.Get("filename")
+
+	if opType != "0" {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	newFm := meta.GetFm(fileHash)
+	newFm.FileName = newFileName
+	meta.UploadFmList(newFm)
+
+	w.WriteHeader(http.StatusOK)
+	data, err := json.Marshal(newFm)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Write(data)
+
+}
+
+// 删除fm和文件
+func FmDeleteHander(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	fileHash := r.Form.Get("filehash")
+
+	fm := meta.GetFm(fileHash)
+
+	// 这里注意要先删除文件 再删除元信息
+	ok := meta.DeleteFile(fm.Location)
+	if !ok {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("file not exists"))
+		return
+	}
+
+	meta.DeleteFm(fileHash)
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("delete ok"))
 
 }
