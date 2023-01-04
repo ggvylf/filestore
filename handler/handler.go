@@ -66,7 +66,10 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		fm.FileSha1 = util.FileSha1(newfile)
 
 		// append到元信息队列中
-		meta.UploadFmList(fm)
+		// meta.UploadFmList(fm)
+
+		// 更新元数据到db
+		_ = meta.UpdateFmDb(fm)
 
 		// 302重定向到上传成功页面
 		http.Redirect(w, r, "/file/upload/suc", http.StatusFound)
@@ -96,7 +99,15 @@ func GetFileMetaHander(w http.ResponseWriter, r *http.Request) {
 
 	// filehash:=r.Form["filehash"][0]
 	filehash := r.Form.Get("filehash")
-	fm := meta.GetFm(filehash)
+	// fm := meta.GetFm(filehash)
+
+	// 从db中获取fm
+	fm, err := meta.GetFmDb(filehash)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	data, err := json.Marshal(fm)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
