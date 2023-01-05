@@ -3,7 +3,7 @@ package meta
 import (
 	"os"
 
-	mysql "github.com/ggvylf/filestore/db"
+	dblayer "github.com/ggvylf/filestore/db"
 )
 
 // 文件的元信息
@@ -40,12 +40,12 @@ func GetFm(filehash string) FileMeta {
 
 // 更新fm元数据到db
 func UpdateFmDb(fm FileMeta) bool {
-	return mysql.InsertFmDb(fm.FileSha1, fm.FileName, fm.Location, fm.FileSize)
+	return dblayer.InsertFmDb(fm.FileSha1, fm.FileName, fm.Location, fm.FileSize)
 }
 
 // 从db中获取fm元信息
 func GetFmDb(filehash string) (FileMeta, error) {
-	tfile, err := mysql.GetFmDb(filehash)
+	tfile, err := dblayer.GetFmDb(filehash)
 	if err != nil {
 		return FileMeta{}, err
 	}
