@@ -1,8 +1,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/ggvylf/filestore/handler"
 )
@@ -35,8 +39,33 @@ func main() {
 	http.HandleFunc("/user/signin", handler.UserSignInHandler)
 
 	// 启动web服务
-	err := http.ListenAndServe(":8888", nil)
-	if err != nil {
-		fmt.Printf("failed to listen port,err=%v\n", err.Error())
+	var srv http.Server
+	srv.Addr = ":8888"
+
+	// 优雅退出
+	idleConnsClosed := make(chan struct{})
+	go func() {
+
+		// 捕获系统信号
+		sigint := make(chan os.Signal, 1)
+		signal.Notify(sigint, syscall.SIGINT, syscall.SIGTERM)
+		<-sigint
+
+		// We received an interrupt signal, shut down.
+		if err := srv.Shutdown(context.Background()); err != nil {
+			// Error from closing listeners, or context timeout:
+			fmt.Printf("HTTP server Shutdown: %v", err)
+		}
+		fmt.Println("Closed")
+		close(idleConnsClosed)
+	}()
+
+	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+		// Error starting or closing listener:
+		fmt.Printf("Failed to listen port,err=%v\n", err.Error())
 	}
+
+	// 等待后台goroutine运行结束
+	<-idleConnsClosed
+
 }
