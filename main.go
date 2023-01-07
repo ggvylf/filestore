@@ -38,6 +38,9 @@ func main() {
 	//用户登录
 	http.HandleFunc("/user/signin", handler.UserSignInHandler)
 
+	// 用户信息
+	http.HandleFunc("/user/info", handler.UserInfoHandler)
+
 	// 启动web服务
 	var srv http.Server
 	srv.Addr = ":8888"

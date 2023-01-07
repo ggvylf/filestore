@@ -75,7 +75,18 @@ func UserSignInHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 登录成功后跳转到主页
-	w.Write([]byte("http://" + r.Host + "/static/view/home.html"))
+	// w.Write([]byte("http://" + r.Host + "/static/view/home.html"))
+
+	resp := util.RespMsg{
+		Code: 0,
+		Msg:  "OK",
+		Data: data{
+			Location: "http://" + r.Host + "/static/view/home.html",
+			Username: username,
+			Token:    token,
+		},
+	}
+	w.Write(resp.JSONBytes())
 
 }
 
@@ -86,4 +97,47 @@ func GenToken(username string) string {
 	ts := fmt.Sprintf("%x", time.Now().Unix())
 	token_prefix := util.MD5([]byte(username + ts + token_salt))
 	return token_prefix + ts[:8]
+}
+
+type data struct {
+	Location string
+	Username string
+	Token    string
+}
+
+// 用户信息
+func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	username := r.Form.Get("username")
+	token := r.Form.Get("token")
+
+	ok := IsTokenValid(username, token)
+	if !ok {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	// 查询db
+	user, err := dblayer.GetUserInfo(username)
+	if err != nil {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	resp := util.RespMsg{
+		Code: 0,
+		Msg:  "ok",
+		Data: user,
+	}
+
+	w.Write(resp.JSONBytes())
+
+}
+
+func IsTokenValid(usernae, token string) bool {
+	// 判断token是否过期
+	// 判断token是否在db中
+	// 对比token
+
+	return true
 }

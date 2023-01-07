@@ -61,7 +61,7 @@ func UserSignin(username, encpwd string) bool {
 
 // 更新用户token
 func UpdateToken(username, token string) bool {
-	stmt, err := mydb.DBConn().Prepare("insert into tbl_user_token(user_name,user_token) values(?,?)")
+	stmt, err := mydb.DBConn().Prepare("replace into tbl_user_token(user_name,user_token) values(?,?)")
 	if err != nil {
 		fmt.Println("Update User Token Failed,err=" + err.Error())
 		return false
@@ -80,4 +80,35 @@ func UpdateToken(username, token string) bool {
 		return true
 	}
 	return false
+}
+
+// 用户信息 跟tbl_user中字段保持一致
+type User struct {
+	Username     string
+	Email        string
+	Phone        string
+	SignupAt     string
+	LastActiveAt string
+	Status       int
+}
+
+// 获取用户信息
+func GetUserInfo(username string) (User, error) {
+	user := User{}
+	stmt, err := mydb.DBConn().Prepare("select user_name,signup_at from tbl_user where user_name=? limit 1")
+
+	if err != nil {
+		fmt.Println("Get User Info Failed,err=" + err.Error())
+		return user, err
+	}
+	defer stmt.Close()
+
+	err = stmt.QueryRow(username).Scan(&user.Username, &user.SignupAt)
+	if err != nil {
+		fmt.Println("Get User Info Failed,err=" + err.Error())
+		return user, err
+	}
+
+	return user, nil
+
 }

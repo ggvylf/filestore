@@ -78,6 +78,7 @@
         alert(err);
       },
       success: function (body) {
+        var body = JSON.parse(body);
         localStorage.setItem("token", body.data.Token)
         localStorage.setItem("username", body.data.Username)
         // 增加上传入口ip:port
