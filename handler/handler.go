@@ -10,6 +10,7 @@ import (
 	"os"
 	"time"
 
+	dblayer "github.com/ggvylf/filestore/db"
 	"github.com/ggvylf/filestore/meta"
 	"github.com/ggvylf/filestore/util"
 )
@@ -68,8 +69,19 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		// append到元信息队列中
 		// meta.UploadFmList(fm)
 
-		// 更新元数据到db
+		// 更新元数据到文件表 tbl_file
 		_ = meta.UpdateFmDb(fm)
+
+		// 更新信息到用户文件表 tbl_user_file
+		// BUG(myself): 前端页面FORM表单里没有username
+		r.ParseForm()
+		username := r.Form.Get("username")
+
+		suc := dblayer.UpdateUserFile(username, fm.FileSha1, fm.FileName, string(fm.FileSize))
+		if !suc {
+			w.Write([]byte("upload failed"))
+			return
+		}
 
 		// 302重定向到上传成功页面
 		http.Redirect(w, r, "/file/upload/suc", http.StatusFound)

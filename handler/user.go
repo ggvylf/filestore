@@ -109,13 +109,14 @@ type data struct {
 func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	username := r.Form.Get("username")
-	token := r.Form.Get("token")
+	// token := r.Form.Get("token")
 
-	ok := IsTokenValid(username, token)
-	if !ok {
-		w.WriteHeader(http.StatusForbidden)
-		return
-	}
+	// 已使用AuthInterceptor 这里已废弃
+	// ok := IsTokenValid(username, token)
+	// if !ok {
+	// 	w.WriteHeader(http.StatusForbidden)
+	// 	return
+	// }
 
 	// 查询db
 	user, err := dblayer.GetUserInfo(username)
@@ -134,7 +135,13 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func IsTokenValid(usernae, token string) bool {
+// token 验证
+func IsTokenValid(username, token string) bool {
+	// 判断token长度是否是40
+	if len(token) < 40 {
+		return false
+	}
+
 	// 判断token是否过期
 	// 判断token是否在db中
 	// 对比token

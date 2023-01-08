@@ -39,7 +39,8 @@ func main() {
 	http.HandleFunc("/user/signin", handler.UserSignInHandler)
 
 	// 用户信息
-	http.HandleFunc("/user/info", handler.UserInfoHandler)
+	// 这里使用了拦截器
+	http.HandleFunc("/user/info", handler.AuthInterceptor(handler.UserInfoHandler))
 
 	// 启动web服务
 	var srv http.Server
