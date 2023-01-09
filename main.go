@@ -33,6 +33,9 @@ func main() {
 	http.HandleFunc("/file/meta", handler.GetFileMetaHander)
 	http.HandleFunc("/file/meta/all", handler.GetFmListHandler)
 
+	// 秒传
+	http.HandleFunc("/file/fastupload", handler.AuthInterceptor(handler.TryFastUploadHandler))
+
 	// 用户注册
 	http.HandleFunc("/user/signup", handler.UserSignUpHandler)
 	//用户登录

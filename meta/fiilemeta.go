@@ -43,11 +43,11 @@ func UpdateFmDb(fm FileMeta) bool {
 	return dblayer.InsertFmDb(fm.FileSha1, fm.FileName, fm.Location, fm.FileSize)
 }
 
-// 从db中获取fm元信息
-func GetFmDb(filehash string) (FileMeta, error) {
+// 从tbl_file中获取fm元信息
+func GetFmDb(filehash string) (*FileMeta, error) {
 	tfile, err := dblayer.GetFmDb(filehash)
-	if err != nil {
-		return FileMeta{}, err
+	if err != nil || tfile == nil {
+		return nil, err
 	}
 	fm := FileMeta{
 		FileSha1: tfile.FileHash,
@@ -55,7 +55,7 @@ func GetFmDb(filehash string) (FileMeta, error) {
 		FileSize: tfile.FileSize.Int64,
 		Location: tfile.FileAddr.String,
 	}
-	return fm, nil
+	return &fm, nil
 }
 
 // 从fmList中删除fm

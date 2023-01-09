@@ -94,7 +94,7 @@
 
   function updateFileList() {
     $.ajax({
-      url: "/file/query?" + queryParams(),
+      url: "/file/meta/all?" + queryParams(),
       type: "POST",
       data: {
         limit: 15
@@ -103,6 +103,7 @@
         alert(JSON.stringify(err));
       },
       success: function (body) {
+        var body = JSON.parse(body);
         if (!body) {
           return;
         }
@@ -111,7 +112,7 @@
           return;
         }
 
-        var dlHost = 'http://localhost:8080';
+        var dlHost = 'http://localhost:8888';
         var dlEntry = localStorage.getItem('downloadEntry');
         if (dlEntry != '') {
           if (dlEntry.indexOf('http:')<0) {

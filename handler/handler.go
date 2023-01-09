@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"time"
 
 	dblayer "github.com/ggvylf/filestore/db"
@@ -77,7 +78,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		r.ParseForm()
 		username := r.Form.Get("username")
 
-		suc := dblayer.UpdateUserFile(username, fm.FileSha1, fm.FileName, string(fm.FileSize))
+		suc := dblayer.UpdateUserFile(username, fm.FileSha1, fm.FileName, fm.FileSize)
 		if !suc {
 			w.Write([]byte("upload failed"))
 			return
@@ -94,8 +95,21 @@ func UploadSucHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // 返回元信息列表
+// 老的方法是从内存中获取
+// 新的方法从tbl_user_file中获取
 func GetFmListHandler(w http.ResponseWriter, r *http.Request) {
-	fmList := meta.GetFmList()
+	// fmList := meta.GetFmList()
+
+	r.ParseForm()
+	username := r.Form.Get("username")
+	limit, _ := strconv.Atoi(r.Form.Get("limit"))
+
+	fmList, err := dblayer.GetUserFileMetas(username, limit)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	data, err := json.Marshal(fmList)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -212,5 +226,55 @@ func FmDeleteHander(w http.ResponseWriter, r *http.Request) {
 	meta.DeleteFm(fileHash)
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("delete ok"))
+
+}
+
+// 尝试秒传接口
+// 秒传
+// 1. 判断文件是否有记录在tbl_file中，
+// 2. 如果有记录，不用上传，直接更新tbl_user_file信息
+// 3. 如果没有记录，走/file/upload接口
+func TryFastUploadHandler(w http.ResponseWriter, r *http.Request) {
+
+	// 解析参数
+	r.ParseForm()
+	username := r.Form.Get("username")
+	filehash := r.Form.Get("filehash")
+	filename := r.Form.Get("filename")
+	filesize, _ := strconv.Atoi(r.Form.Get("filesize"))
+
+	// 查询tbl_file中相同filehash
+	fm, err := meta.GetFmDb(filehash)
+
+	fmt.Println(fm)
+	fmt.Println(err)
+
+	// 判断文件是否存在
+	if fm == nil || err != nil {
+		resp := util.RespMsg{
+			Code: -1,
+			Msg:  "秒传失败，使用普通上传接口",
+		}
+		w.Write(resp.JSONBytes())
+
+		return
+	}
+
+	// 更新tbl_user_file
+	suc := dblayer.UpdateUserFile(username, filehash, filename, int64(filesize))
+	if !suc {
+		resp := util.RespMsg{
+			Code: -2,
+			Msg:  "秒传失败，请稍后重试",
+		}
+		w.Write(resp.JSONBytes())
+
+	}
+
+	resp := util.RespMsg{
+		Code: 0,
+		Msg:  "秒传成功",
+	}
+	w.Write(resp.JSONBytes())
 
 }
