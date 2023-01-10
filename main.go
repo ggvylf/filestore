@@ -36,6 +36,11 @@ func main() {
 	// 秒传
 	http.HandleFunc("/file/fastupload", handler.AuthInterceptor(handler.TryFastUploadHandler))
 
+	// 分块上传
+	http.HandleFunc("/file/mpupload/init", handler.AuthInterceptor(handler.InitMultipartUploadHandler))
+	http.HandleFunc("/file/mpupload/uppart", handler.AuthInterceptor(handler.UploadPartHandler))
+	http.HandleFunc("/file/mpupload/complete", handler.AuthInterceptor(handler.CompleteUploadHandler))
+
 	// 用户注册
 	http.HandleFunc("/user/signup", handler.UserSignUpHandler)
 	//用户登录
