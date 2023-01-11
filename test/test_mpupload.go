@@ -75,19 +75,21 @@ func multipartUpload(filename string, targetURL string, chunkSize int) error {
 	return nil
 }
 
-func main2() {
+func main() {
 	username := "admin"
-	token := "54eefa7dbd5bcf852c52fecd816f2a315c61832c"
+	token := "c439226a3f57e4f9ddc60a8e18d75d2963bbc5f5"
 	filehash := "dfa39cac093a7a9c94d25130671ec474d51a2995"
+	filesize := "xxxxx"
+	filename := ""
 
 	// 1. 请求初始化分块上传接口
 	resp, err := http.PostForm(
-		"http://localhost:8080/file/mpupload/init",
+		"http://127.0.0.1:8888/file/mpupload/init",
 		url.Values{
 			"username": {username},
 			"token":    {token},
 			"filehash": {filehash},
-			"filesize": {"132489256"},
+			"filesize": {filesize},
 		})
 
 	if err != nil {
@@ -109,19 +111,19 @@ func main2() {
 
 	// 3. 请求分块上传接口
 	filename := "/data/pkg/go1.10.3.linux-amd64.tar.gz"
-	tURL := "http://localhost:8080/file/mpupload/uppart?" +
+	tURL := "http://127.0.0.1:8888/file/mpupload/uppart?" +
 		"username=admin&token=" + token + "&uploadid=" + uploadID
 	multipartUpload(filename, tURL, chunkSize)
 
 	// 4. 请求分块完成接口
 	resp, err = http.PostForm(
-		"http://localhost:8080/file/mpupload/complete",
+		"http://127.0.0.1:8888/file/mpupload/complete",
 		url.Values{
 			"username": {username},
 			"token":    {token},
 			"filehash": {filehash},
-			"filesize": {"132489256"},
-			"filename": {"go1.10.3.linux-amd64.tar.gz"},
+			"filesize": {filesize},
+			"filename": {filename},
 			"uploadid": {uploadID},
 		})
 

@@ -34,6 +34,6 @@ func test_upload() {
 	}
 }
 
-func main1() {
+func main() {
 	test_upload()
 }

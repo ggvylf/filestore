@@ -141,10 +141,6 @@ func CompleteUploadHandler(w http.ResponseWriter, r *http.Request) {
 	// 实际分块的数量
 	chunkcount := 0
 
-
-	//
-	chunkindex=
-
 	// data中的格式是k1 v1 k2 v2
 	for i := 0; i < len(data); i += 2 {
 
@@ -168,16 +164,31 @@ func CompleteUploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 合并分块
+	fpath := "/tmp" + uploadid + "/" + chunkindex
+	fileaddr := fmt.Sprintf("/tmp/" + filename)
 
-	// 找到要合并的文件
-	fpath := "/tmp" + uploadid + "/" + chunkIndex
-	
-	// 合并操作
+	fd, _ := os.OpenFile(fileaddr, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	defer fd.Close()
 
-	fileaddr
+	files, _ := os.ReadDir(fpath)
+	for _, f := range files {
+		// Name()只返回文件名，不包含路径
+		if f.Name() == filename {
+			break
+		}
+		data, err := os.ReadFile(fpath + f.Name())
+		if err != nil {
+			fmt.Println(err)
+		}
+		_, err = fd.Write(data)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
 
 	// 更新tbl_file和tbl_user_file
 	fsize, _ := strconv.Atoi(filesize)
+
 	dblayer.InsertFmDb(filehash, filename, fileaddr, int64(fsize))
 	dblayer.UpdateUserFile(username, filehash, filename, int64(fsize))
 
