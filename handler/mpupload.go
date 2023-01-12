@@ -5,12 +5,14 @@ import (
 	"math"
 	"net/http"
 	"os"
+	"path"
+	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	rPool "github.com/ggvylf/filestore/cache/redis"
-	dblayer "github.com/ggvylf/filestore/db"
 	"github.com/ggvylf/filestore/util"
 	"github.com/gomodule/redigo/redis"
 )
@@ -52,16 +54,24 @@ func InitMultipartUploadHandler(w http.ResponseWriter, r *http.Request) {
 		ChunkSize: 5 * 1024 * 1024, //5M,
 
 		// 分块的个数
-		ChunkCount: int(math.Ceil(float64(filesize)) / (5 * 1024 * 1024)),
+		ChunkCount: int(math.Ceil(float64(filesize) / (5 * 1024 * 1024))),
 	}
 
 	// 写入redis
 
 	// 期望的分块数量
 	rConn.Do("HSET", "MP_"+mpInfo.UploadID, "chunkcount", mpInfo.ChunkCount)
-
 	rConn.Do("HSET", "MP_"+mpInfo.UploadID, "filehash", mpInfo.FileHash)
 	rConn.Do("HSET", "MP_"+mpInfo.UploadID, "filesize", mpInfo.FileSize)
+
+	// example:
+	// 127.0.0.1:6379> HGETALL MP_admin17397e0729ee9c44
+	// 1) "chunkcount"
+	// 2) "28"
+	// 3) "filehash"
+	// 4) "fe1d6ccb2544698b5c567411306e659de0fe922d"
+	// 5) "filesize"
+	// 6) "148883574"
 
 	// 返回响应信息
 	w.Write(util.NewRespMsg(0, "ok", mpInfo).JSONBytes())
@@ -80,11 +90,11 @@ func UploadPartHandler(w http.ResponseWriter, r *http.Request) {
 	defer rConn.Close()
 
 	// 创建文件句柄
-	fpath := "/tmp" + uploadID + "/" + chunkIndex
-	os.MkdirAll(fpath, 0644)
+	fpath := "/tmp" + "/" + uploadID + "/" + chunkIndex
+	os.MkdirAll(path.Dir(fpath), 0744)
 	fd, err := os.Create(fpath)
 	if err != nil {
-		w.Write(util.NewRespMsg(-1, "upload part failed", nil).JSONBytes())
+		w.Write(util.NewRespMsg(-1, "create part failed", nil).JSONBytes())
 		return
 
 	}
@@ -114,11 +124,10 @@ func CompleteUploadHandler(w http.ResponseWriter, r *http.Request) {
 	// 解析参数
 	r.ParseForm()
 	uploadid := r.Form.Get("uploadid")
-	username := r.Form.Get("username")
-	filehash := r.Form.Get("filehash")
-	filesize := r.Form.Get("filesize")
+	// username := r.Form.Get("username")
+	// filehash := r.Form.Get("filehash")
+	// filesize := r.Form.Get("filesize")
 	filename := r.Form.Get("filename")
-	chunkindex := r.Form.Get("index")
 
 	// 获取redis连接
 	rConn := rPool.RedisPool().Get()
@@ -144,8 +153,8 @@ func CompleteUploadHandler(w http.ResponseWriter, r *http.Request) {
 	// data中的格式是k1 v1 k2 v2
 	for i := 0; i < len(data); i += 2 {
 
-		k := string(data[i].(byte))
-		v := string(data[i+1].(byte))
+		k := string(data[i].([]byte))
+		v := string(data[i+1].([]byte))
 
 		// 获取期望数量
 		if k == "chunkcount" {
@@ -159,38 +168,46 @@ func CompleteUploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if total != chunkcount {
-		w.Write(util.NewRespMsg(-1, "Complete upload failed", nil).JSONBytes())
+		w.Write(util.NewRespMsg(-1, "chunkcount check failed", chunkcount).JSONBytes())
 		return
 	}
 
 	// 合并分块
-	fpath := "/tmp" + uploadid + "/" + chunkindex
-	fileaddr := fmt.Sprintf("/tmp/" + filename)
+	fpath := "/tmp" + "/" + uploadid + "/"
+	_, fname := path.Split(filename)
+	fileaddr := fmt.Sprintf("/tmp/" + fname)
 
 	fd, _ := os.OpenFile(fileaddr, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	defer fd.Close()
 
-	files, _ := os.ReadDir(fpath)
-	for _, f := range files {
-		// Name()只返回文件名，不包含路径
-		if f.Name() == filename {
-			break
-		}
-		data, err := os.ReadFile(fpath + f.Name())
-		if err != nil {
-			fmt.Println(err)
-		}
-		_, err = fd.Write(data)
-		if err != nil {
-			fmt.Println(err)
-		}
-	}
+	files, _ := filepath.Glob(fpath + "*")
+	sort.Strings(files)
+	fmt.Println(files)
 
-	// 更新tbl_file和tbl_user_file
-	fsize, _ := strconv.Atoi(filesize)
+	// // 文件要排序
+	// for _, f := range files {
+	// 	fmt.Println(f.Name())
+	// 	// Name()只返回文件名，不包含路径
+	// 	if f.Name() == filename {
+	// 		break
+	// 	}
+	// 	data, err := os.ReadFile(fpath + f.Name())
+	// 	if err != nil {
+	// 		fmt.Println("read part file err=", err)
+	// 	}
+	// 	_, err = fd.Write(data)
+	// 	if err != nil {
+	// 		fmt.Println("write part file err=", err)
+	// 	}
+	// }
 
-	dblayer.InsertFmDb(filehash, filename, fileaddr, int64(fsize))
-	dblayer.UpdateUserFile(username, filehash, filename, int64(fsize))
+	// fmt.Println("complete file suc")
+
+	// // 更新tbl_file和tbl_user_file
+	// fsize, _ := strconv.Atoi(filesize)
+
+	// dblayer.InsertFmDb(filehash, filename, fileaddr, int64(fsize))
+	// dblayer.UpdateUserFile(username, filehash, filename, int64(fsize))
 
 	// 响应处理结果
 	w.Write(util.NewRespMsg(0, "ok", nil).JSONBytes())

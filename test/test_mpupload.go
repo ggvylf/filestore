@@ -34,7 +34,7 @@ func multipartUpload(filename string, targetURL string, chunkSize int) error {
 		}
 		index++
 
-		bufCopied := make([]byte, 5*1048576)
+		bufCopied := make([]byte, 5*1048576) // 5*1024*1024 5m
 		copy(bufCopied, buf)
 
 		go func(b []byte, curIdx int) {
@@ -78,9 +78,9 @@ func multipartUpload(filename string, targetURL string, chunkSize int) error {
 func main() {
 	username := "admin"
 	token := "c439226a3f57e4f9ddc60a8e18d75d2963bbc5f5"
-	filehash := "dfa39cac093a7a9c94d25130671ec474d51a2995"
-	filesize := "xxxxx"
-	filename := ""
+	filehash := "fe1d6ccb2544698b5c567411306e659de0fe922d" //sha1sum filename
+	filesize := "148883574"
+	filename := "/home/ggvylf/Downloads/go1.19.2.linux-amd64.tar.gz"
 
 	// 1. 请求初始化分块上传接口
 	resp, err := http.PostForm(
@@ -93,24 +93,25 @@ func main() {
 		})
 
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Println("initmp resp err=", err.Error())
 		os.Exit(-1)
 	}
 
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Println("initmp resp body read err=", err.Error())
 		os.Exit(-1)
 	}
 
 	// 2. 得到uploadID以及服务端指定的分块大小chunkSize
 	uploadID := jsonit.Get(body, "data").Get("UploadID").ToString()
 	chunkSize := jsonit.Get(body, "data").Get("ChunkSize").ToInt()
-	fmt.Printf("uploadid: %s  chunksize: %d\n", uploadID, chunkSize)
+	chunkCount := jsonit.Get(body, "data").Get("ChunkCount").ToInt()
+	fmt.Printf("uploadid: %s  chunksize: %d chunkcount: %d\n", uploadID, chunkSize, chunkCount)
 
 	// 3. 请求分块上传接口
-	filename := "/data/pkg/go1.10.3.linux-amd64.tar.gz"
+
 	tURL := "http://127.0.0.1:8888/file/mpupload/uppart?" +
 		"username=admin&token=" + token + "&uploadid=" + uploadID
 	multipartUpload(filename, tURL, chunkSize)
