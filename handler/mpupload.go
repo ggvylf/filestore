@@ -7,12 +7,12 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	rPool "github.com/ggvylf/filestore/cache/redis"
+	dblayer "github.com/ggvylf/filestore/db"
 	"github.com/ggvylf/filestore/util"
 	"github.com/gomodule/redigo/redis"
 )
@@ -124,9 +124,9 @@ func CompleteUploadHandler(w http.ResponseWriter, r *http.Request) {
 	// 解析参数
 	r.ParseForm()
 	uploadid := r.Form.Get("uploadid")
-	// username := r.Form.Get("username")
-	// filehash := r.Form.Get("filehash")
-	// filesize := r.Form.Get("filesize")
+	username := r.Form.Get("username")
+	filehash := r.Form.Get("filehash")
+	filesize := r.Form.Get("filesize")
 	filename := r.Form.Get("filename")
 
 	// 获取redis连接
@@ -177,37 +177,39 @@ func CompleteUploadHandler(w http.ResponseWriter, r *http.Request) {
 	_, fname := path.Split(filename)
 	fileaddr := fmt.Sprintf("/tmp/" + fname)
 
-	fd, _ := os.OpenFile(fileaddr, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	fd, _ := os.OpenFile(fileaddr, os.O_CREATE|os.O_WRONLY, 0644)
 	defer fd.Close()
 
 	files, _ := filepath.Glob(fpath + "*")
-	sort.Strings(files)
-	fmt.Println(files)
+	// fmt.Println(files)
+	filessorted, err := util.FileSortForStringWithNum(files)
+	if err != nil {
+		fmt.Println("files sort failed,err=", err)
+	}
+	// fmt.Println(filessorted)
 
-	// // 文件要排序
-	// for _, f := range files {
-	// 	fmt.Println(f.Name())
-	// 	// Name()只返回文件名，不包含路径
-	// 	if f.Name() == filename {
-	// 		break
-	// 	}
-	// 	data, err := os.ReadFile(fpath + f.Name())
-	// 	if err != nil {
-	// 		fmt.Println("read part file err=", err)
-	// 	}
-	// 	_, err = fd.Write(data)
-	// 	if err != nil {
-	// 		fmt.Println("write part file err=", err)
-	// 	}
-	// }
+	for _, f := range filessorted {
+		// 排除目标文件在同目录下
+		if filepath.Base(f) == fname {
+			break
+		}
+		data, err := os.ReadFile(f)
+		if err != nil {
+			fmt.Println("read part file err=", err)
+		}
+		_, err = fd.Write(data)
+		if err != nil {
+			fmt.Println("write part file err=", err)
+		}
+	}
 
-	// fmt.Println("complete file suc")
+	fmt.Println("complete file suc")
 
-	// // 更新tbl_file和tbl_user_file
-	// fsize, _ := strconv.Atoi(filesize)
+	// 更新tbl_file和tbl_user_file
+	fsize, _ := strconv.Atoi(filesize)
 
-	// dblayer.InsertFmDb(filehash, filename, fileaddr, int64(fsize))
-	// dblayer.UpdateUserFile(username, filehash, filename, int64(fsize))
+	dblayer.InsertFmDb(filehash, filename, fileaddr, int64(fsize))
+	dblayer.UpdateUserFile(username, filehash, filename, int64(fsize))
 
 	// 响应处理结果
 	w.Write(util.NewRespMsg(0, "ok", nil).JSONBytes())
