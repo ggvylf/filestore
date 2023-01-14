@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,7 +14,9 @@ import (
 
 	dblayer "github.com/ggvylf/filestore/db"
 	"github.com/ggvylf/filestore/meta"
+	mystore "github.com/ggvylf/filestore/store"
 	"github.com/ggvylf/filestore/util"
+	"github.com/minio/minio-go/v7"
 )
 
 // 上传文件并保存到本地
@@ -66,6 +69,21 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		newfile.Seek(0, 0)
 		// 计算上传文件的sha1
 		fm.FileSha1 = util.FileSha1(newfile)
+
+		//把文件写入对象存储
+		newfile.Seek(0, 0)
+		data, _ := io.ReadAll(newfile)
+		ctx := context.Background()
+		mc := mystore.GetMC()
+		mystore.G
+		bucket := "userfile"
+		path := "/minio/" + fm.FileSha1
+		_, err = mc.PutObject(ctx, bucket, fm.FileName, data, fm.FileSize, minio.PutObjectOptions{ContentType: "application/octet-stream"})
+		if err != nil {
+			fmt.Println("upload file to oss failed,err=", err)
+			return
+		}
+		fm.Location = path
 
 		// append到元信息队列中
 		// meta.UploadFmList(fm)
