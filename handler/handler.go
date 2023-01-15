@@ -14,7 +14,7 @@ import (
 
 	dblayer "github.com/ggvylf/filestore/db"
 	"github.com/ggvylf/filestore/meta"
-	mystore "github.com/ggvylf/filestore/store"
+	store "github.com/ggvylf/filestore/store/minio"
 	"github.com/ggvylf/filestore/util"
 	"github.com/minio/minio-go/v7"
 )
@@ -71,14 +71,14 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		fm.FileSha1 = util.FileSha1(newfile)
 
 		//把文件写入对象存储
-		newfile.Seek(0, 0)
-		data, _ := io.ReadAll(newfile)
+		data, _ := os.Open(fm.Location)
 		ctx := context.Background()
-		mc := mystore.GetMC()
-		mystore.G
+		mc := store.GetMC()
 		bucket := "userfile"
-		path := "/minio/" + fm.FileSha1
-		_, err = mc.PutObject(ctx, bucket, fm.FileName, data, fm.FileSize, minio.PutObjectOptions{ContentType: "application/octet-stream"})
+		ossName := "/minio" + "/" + fm.FileSha1
+		path := "/userfile" + ossName
+
+		_, err = mc.PutObject(ctx, bucket, ossName, data, fm.FileSize, minio.PutObjectOptions{ContentType: "application/octet-stream"})
 		if err != nil {
 			fmt.Println("upload file to oss failed,err=", err)
 			return

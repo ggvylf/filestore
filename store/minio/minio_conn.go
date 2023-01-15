@@ -1,4 +1,4 @@
-package minio
+package store
 
 import (
 	"fmt"
@@ -15,7 +15,7 @@ func init() {
 }
 
 func NewMinioClient() *minio.Client {
-	endpoint := "/127.0.0.1:9090"
+	endpoint := "127.0.0.1:9000"
 	aceessKey := "KwoLR7sWIdp8LZAt"
 	secretAccessKey := "6sZAYToCkY7Uhl0hZbJjIgewReVEyLXt"
 	userSSL := false

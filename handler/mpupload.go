@@ -208,8 +208,9 @@ func CompleteUploadHandler(w http.ResponseWriter, r *http.Request) {
 	// 更新tbl_file和tbl_user_file
 	fsize, _ := strconv.Atoi(filesize)
 
-	dblayer.InsertFmDb(filehash, filename, fileaddr, int64(fsize))
-	dblayer.UpdateUserFile(username, filehash, filename, int64(fsize))
+	name := filepath.Base(filename)
+	dblayer.InsertFmDb(filehash, name, fileaddr, int64(fsize))
+	dblayer.UpdateUserFile(username, filehash, name, int64(fsize))
 
 	// 响应处理结果
 	w.Write(util.NewRespMsg(0, "ok", nil).JSONBytes())
