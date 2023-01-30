@@ -41,6 +41,9 @@ func main() {
 	http.HandleFunc("/file/mpupload/uppart", handler.AuthInterceptor(handler.UploadPartHandler))
 	http.HandleFunc("/file/mpupload/complete", handler.AuthInterceptor(handler.CompleteUploadHandler))
 
+	//获取文件下载的url
+	http.HandleFunc("/file/downloadurl", handler.AuthInterceptor(handler.DownloadUrlHandler))
+
 	// 用户注册
 	http.HandleFunc("/user/signup", handler.UserSignUpHandler)
 	//用户登录

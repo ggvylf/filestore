@@ -188,7 +188,7 @@ func DownFileHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/octect")
 	// 避免中文文件名乱码
-	w.Header().Set("Content-Dispositon", fmt.Sprintf("attachment; filename*=utf-8''%s", url.QueryEscape(fm.FileName)))
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename*=utf-8''%s", url.QueryEscape(fm.FileName)))
 
 	w.Write(data)
 
@@ -294,5 +294,33 @@ func TryFastUploadHandler(w http.ResponseWriter, r *http.Request) {
 		Msg:  "秒传成功",
 	}
 	w.Write(resp.JSONBytes())
+
+}
+
+// 返回文件下载地址
+func DownloadUrlHandler(w http.ResponseWriter, r *http.Request) {
+	// 获取文件hash
+	r.ParseForm()
+	filehash := r.Form.Get("filehash")
+
+	//从tbl_file表中获取文件的信息
+	row, err := dblayer.GetFmDb(filehash)
+	if err != nil {
+		resp := util.RespMsg{
+			Code: -1,
+			Msg:  "文件不存在",
+		}
+		w.Write(resp.JSONBytes())
+
+		return
+	}
+
+	// 判断文件存放是在本地还是在oss上
+
+	// 本地
+
+	// oss上
+	url := store.DownloadUrl(row.FileHash, row.FileName.String)
+	w.Write([]byte(url))
 
 }

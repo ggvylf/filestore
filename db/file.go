@@ -67,5 +67,4 @@ func GetFmDb(filehash string) (*TableFile, error) {
 	}
 
 	return &tfile, nil
-
 }
