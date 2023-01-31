@@ -2,12 +2,13 @@ module github.com/ggvylf/filestore
 
 go 1.19
 
-
 require (
 	github.com/go-sql-driver/mysql v1.7.0
 	github.com/gomodule/redigo v1.8.9
 	github.com/json-iterator/go v1.1.12
+	github.com/micro/cli v0.2.0
 	github.com/minio/minio-go/v7 v7.0.47
+	github.com/rabbitmq/amqp091-go v1.6.0
 )
 
 require (
