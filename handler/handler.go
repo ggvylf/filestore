@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,11 +11,13 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ggvylf/filestore/common"
+	"github.com/ggvylf/filestore/config"
 	dblayer "github.com/ggvylf/filestore/db"
 	"github.com/ggvylf/filestore/meta"
+	"github.com/ggvylf/filestore/mq"
 	store "github.com/ggvylf/filestore/store/minio"
 	"github.com/ggvylf/filestore/util"
-	"github.com/minio/minio-go/v7"
 )
 
 // 上传文件并保存到本地
@@ -71,19 +72,37 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		fm.FileSha1 = util.FileSha1(newfile)
 
 		//把文件写入对象存储
-		data, _ := os.Open(fm.Location)
-		ctx := context.Background()
-		mc := store.GetMC()
+		// data, _ := os.Open(fm.Location)
+		// ctx := context.Background()
+		// mc := store.GetMC()
 		bucket := "userfile"
 		ossName := "/minio" + "/" + fm.FileSha1
-		path := "/userfile" + ossName
+		// path := "/userfile" + ossName
 
-		_, err = mc.PutObject(ctx, bucket, ossName, data, fm.FileSize, minio.PutObjectOptions{ContentType: "application/octet-stream"})
-		if err != nil {
-			fmt.Println("upload file to oss failed,err=", err)
+		// _, err = mc.PutObject(ctx, bucket, ossName, data, fm.FileSize, minio.PutObjectOptions{ContentType: "application/octet-stream"})
+		// if err != nil {
+		// 	fmt.Println("upload file to oss failed,err=", err)
+		// 	return
+		// }
+		// fm.Location = path
+
+		// 拼接mq信息
+		data := mq.TransferData{
+			FileHash:      fm.FileSha1,
+			CurLocation:   fm.Location,
+			DestLocation:  ossName,
+			DestStoreType: common.StoreOSS,
+			FileSize:      fm.FileSize,
+			Bucket:        bucket,
+		}
+		pubData, _ := json.Marshal(data)
+
+		// 推送到mq
+		suc := mq.Publush(config.TransExchangeName, config.TransOSSRoutingKey, pubData)
+		if !suc {
+			fmt.Println("send to mq failed")
 			return
 		}
-		fm.Location = path
 
 		// append到元信息队列中
 		// meta.UploadFmList(fm)
@@ -96,7 +115,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		r.ParseForm()
 		username := r.Form.Get("username")
 
-		suc := dblayer.UpdateUserFile(username, fm.FileSha1, fm.FileName, fm.FileSize)
+		suc = dblayer.UpdateUserFile(username, fm.FileSha1, fm.FileName, fm.FileSize)
 		if !suc {
 			w.Write([]byte("upload failed"))
 			return

@@ -69,8 +69,8 @@ func GetFmDb(filehash string) (*TableFile, error) {
 	return &tfile, nil
 }
 
-// UpdateFileLocation : 更新文件的存储地址(如文件被转移了)
-func UpdateFileLocation(filehash string, fileaddr string) bool {
+// 更新tbl_file的fileaddr字段
+func UpdateFmAddr(filehash string, fileaddr string) bool {
 	stmt, err := mydb.DBConn().Prepare(
 		"update tbl_file set`file_addr`=? where  `file_sha1`=? limit 1")
 	if err != nil {

@@ -63,6 +63,6 @@ func Publush(exchange, routingKey string, msg []byte) bool {
 		fmt.Println("msg publish err,err=", err.Error())
 		return false
 	}
-	fmt.Println("send msg=", msg)
+	fmt.Println("send msg=", string(msg))
 	return true
 }

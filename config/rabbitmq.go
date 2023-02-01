@@ -2,7 +2,7 @@ package config
 
 const (
 	// AsyncTransferEnable : 是否开启文件异步转移(默认同步)
-	AsyncTransferEnable = false
+	AsyncTransferEnable = true
 	// TransExchangeName : 用于文件transfer的交换机
 	TransExchangeName = "uploadserver.trans"
 	// TransOSSQueueName : oss转移队列名

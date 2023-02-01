@@ -14,10 +14,11 @@ import (
 	"github.com/minio/minio-go/v7"
 )
 
-// ProcessTransfer : 处理文件转移
+// 消费mq回调函数
 func ProcessTransfer(msg []byte) bool {
 	log.Println(string(msg))
 
+	// 解析msg数据
 	pubData := mq.TransferData{}
 	err := json.Unmarshal(msg, &pubData)
 	if err != nil {
@@ -25,19 +26,22 @@ func ProcessTransfer(msg []byte) bool {
 		return false
 	}
 
-	fin, err := os.Open(pubData.CurLocation)
+	// 打开本地临时文件
+	file, err := os.Open(pubData.CurLocation)
 	if err != nil {
 		log.Println(err.Error())
 		return false
 	}
+	defer file.Close()
 
+	// 写入oss
 	ctx := context.Background()
 
 	_, err = store.GetMC().PutObject(
 		ctx,
 		pubData.Bucket,
 		pubData.DestLocation,
-		bufio.NewReader(fin),
+		bufio.NewReader(file),
 		pubData.FileSize,
 		minio.PutObjectOptions{ContentType: "application/octet-stream"},
 	)
@@ -46,9 +50,9 @@ func ProcessTransfer(msg []byte) bool {
 		return false
 	}
 
-	_ = dblayer.UpdateFileLocation(
-		pubData.FileHash,
-		pubData.DestLocation)
+	// 更新文件地址
+	_ = dblayer.UpdateFmAddr(pubData.FileHash, pubData.DestLocation)
+
 	return true
 }
 
@@ -58,6 +62,8 @@ func main() {
 		return
 	}
 	log.Println("文件转移服务启动中，开始监听转移任务队列...")
+
+	// 消费mq
 	mq.StartConsume(
 		config.TransOSSQueueName,
 		"transfer_oss",

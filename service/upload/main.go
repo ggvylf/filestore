@@ -14,7 +14,7 @@ import (
 func main() {
 
 	//处理静态资源映射
-	http.Handle("/static/", http.StripPrefix("/static", http.FileServer(http.Dir("./static"))))
+	http.Handle("/static/", http.StripPrefix("/static", http.FileServer(http.Dir("../../static"))))
 
 	// 上传文件
 	http.HandleFunc("/file/upload", handler.UploadHandler)
