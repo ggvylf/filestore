@@ -3,11 +3,11 @@ package handler
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"time"
 
 	dblayer "github.com/ggvylf/filestore/db"
 	"github.com/ggvylf/filestore/util"
+	"github.com/gin-gonic/gin"
 )
 
 var (
@@ -16,25 +16,21 @@ var (
 )
 
 // 用户注册
-func UserSignUpHandler(w http.ResponseWriter, r *http.Request) {
-	//Get 方式返回注册页面
-	if r.Method == http.MethodGet {
-		data, err := os.ReadFile("./static/view/signup.html")
+func UserSignUpGet(c *gin.Context) {
+	c.Redirect(http.StatusFound, "/static/view/signup.html")
 
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		w.Write(data)
-	}
+}
 
-	r.ParseForm()
-	username := r.Form.Get("username")
-	passwd := r.Form.Get("password")
+func UserSignUpPost(c *gin.Context) {
+	username := c.Request.FormValue("username")
+	passwd := c.Request.FormValue("password")
 
 	// 对用户名和密码做简单的校验
 	if len(username) < 3 || len(passwd) < 5 {
-		w.Write([]byte("invalid parameter"))
+		c.JSON(http.StatusOK, gin.H{
+			"msg":  "invalid parameter",
+			"code": -1,
+		})
 		return
 	}
 
@@ -44,24 +40,36 @@ func UserSignUpHandler(w http.ResponseWriter, r *http.Request) {
 	// 用户名 密码写入数据库
 	suc := dblayer.UserSignup(username, encpwd)
 	if suc {
-		w.Write([]byte("user signup success"))
+		c.JSON(http.StatusOK, gin.H{
+			"msg":  "user signup ok!",
+			"code": 0,
+		})
 	} else {
-		w.Write([]byte("user signup failed"))
+		c.JSON(http.StatusOK, gin.H{
+			"msg":  "user signup failed",
+			"code": -2,
+		})
 	}
 
 }
 
 // 用户登录
-func UserSignInHandler(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-	username := r.Form.Get("username")
-	passwd := r.Form.Get("password")
+func UserSigninGet(c *gin.Context) {
+	c.Redirect(http.StatusFound, "/static/view/signin.html")
+}
+
+func UserSigninPost(c *gin.Context) {
+	username := c.Request.FormValue("username")
+	passwd := c.Request.FormValue("password")
 	encpwd := util.Sha1([]byte(passwd + pwd_salt))
 
 	// 从db校验用户名密码
 	pwdChecked := dblayer.UserSignin(username, encpwd)
 	if !pwdChecked {
-		w.Write([]byte("user checked failed"))
+		c.JSON(http.StatusOK, gin.H{
+			"msg":  "username or password check error!",
+			"code": -2,
+		})
 		return
 	}
 
@@ -70,23 +78,28 @@ func UserSignInHandler(w http.ResponseWriter, r *http.Request) {
 	// 更新token库
 	suc := dblayer.UpdateToken(username, token)
 	if !suc {
-		w.Write([]byte("User login failed"))
+		c.JSON(http.StatusOK, gin.H{
+			"msg":  "token update failed",
+			"code": -2,
+		})
 		return
 	}
 
 	// 登录成功后跳转到主页
-	// w.Write([]byte("http://" + r.Host + "/static/view/home.html"))
-
 	resp := util.RespMsg{
 		Code: 0,
 		Msg:  "OK",
 		Data: data{
-			Location: "http://" + r.Host + "/static/view/home.html",
-			Username: username,
-			Token:    token,
+			Location:      "http://" + c.Request.Host + "/static/view/home.html",
+			Username:      username,
+			Token:         token,
+			DownloadEntry: "http://" + c.Request.Host,
+			UploadEntry:   "http://" + c.Request.Host,
 		},
 	}
-	w.Write(resp.JSONBytes())
+
+	// c.Data(http.StatusOK, "application/json", resp.JSONBytes())
+	c.JSON(http.StatusOK, resp)
 
 }
 
@@ -100,28 +113,22 @@ func GenToken(username string) string {
 }
 
 type data struct {
-	Location string
-	Username string
-	Token    string
+	Location      string
+	Username      string
+	Token         string
+	DownloadEntry string
+	UploadEntry   string
 }
 
 // 用户信息
-func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-	username := r.Form.Get("username")
-	// token := r.Form.Get("token")
+func UserInfoHandler(c *gin.Context) {
 
-	// 已使用AuthInterceptor 这里已废弃
-	// ok := IsTokenValid(username, token)
-	// if !ok {
-	// 	w.WriteHeader(http.StatusForbidden)
-	// 	return
-	// }
+	username := c.Request.FormValue("username")
 
 	// 查询db
 	user, err := dblayer.GetUserInfo(username)
 	if err != nil {
-		w.WriteHeader(http.StatusForbidden)
+		c.JSON(http.StatusForbidden, "")
 		return
 	}
 
@@ -131,8 +138,7 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 		Data: user,
 	}
 
-	w.Write(resp.JSONBytes())
-
+	c.JSON(http.StatusOK, resp)
 }
 
 // token 验证

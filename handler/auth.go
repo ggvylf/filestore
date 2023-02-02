@@ -1,21 +1,35 @@
 package handler
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/ggvylf/filestore/common"
+	"github.com/ggvylf/filestore/util"
+	"github.com/gin-gonic/gin"
+)
 
 // 拦截器模式
-func AuthInterceptor(h http.HandlerFunc) http.HandlerFunc {
-	return http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			r.ParseForm()
-			username := r.Form.Get("username")
-			token := r.Form.Get("token")
+func AuthInterceptor() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		username := c.Request.FormValue("username")
+		token := c.Request.FormValue("token")
 
-			if len(username) < 3 || !IsTokenValid(username, token) {
+		if len(username) < 3 || !IsTokenValid(username, token) {
 
-				w.WriteHeader(http.StatusForbidden)
-				return
+			// 验证失败后续不再执行
+			c.Abort()
+			resp := util.NewRespMsg(
+				int(common.StatusTokenInvalid),
+				"token无效",
+				nil,
+			)
 
-			}
-			h(w, r)
-		})
+			c.JSON(http.StatusOK, resp)
+
+			return
+
+		}
+
+		c.Next()
+	}
 }

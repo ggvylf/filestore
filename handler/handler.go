@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -18,165 +17,158 @@ import (
 	"github.com/ggvylf/filestore/mq"
 	store "github.com/ggvylf/filestore/store/minio"
 	"github.com/ggvylf/filestore/util"
+	"github.com/gin-gonic/gin"
 )
 
 // 上传文件并保存到本地
-func UploadHandler(w http.ResponseWriter, r *http.Request) {
+func UploadHandlerGet(c *gin.Context) {
+	c.Redirect(http.StatusFound, "/static/view/upload.html")
+}
 
-	if r.Method == "GET" {
-		// 返回上传页面
-		data, err := os.ReadFile("./static/view/index.html")
-		if err != nil {
-			io.WriteString(w, "InternalServerError")
-			return
-		}
-		io.WriteString(w, string(data))
+func UploadHandlerPost(c *gin.Context) {
+	//从form表单中获取文件
+	file, err := c.FormFile("file")
 
-	} else if r.Method == "POST" {
-		// 接收上传的内容并存储到本地
-
-		//从form表单中获取文件
-		file, head, err := r.FormFile("file")
-
-		if err != nil {
-			fmt.Printf("failed to get data,err=%v\n", err.Error())
-			return
-		}
-		defer file.Close()
-
-		// 初始化FileMeta
-		fm := meta.FileMeta{
-			FileName: head.Filename,
-			Location: "/tmp/" + head.Filename,
-			UpoadAt:  time.Now().Format("2006-01-02 15:04:05"),
-		}
-
-		//新建一个本地文件的fd
-		newfile, err := os.Create(fm.Location)
-		if err != nil {
-			fmt.Printf("Failed to create file,err=%v\n", err.Error())
-			return
-		}
-		defer newfile.Close()
-
-		// 复制文件 同时可以获取文件大小
-		fm.FileSize, err = io.Copy(newfile, file)
-		if err != nil {
-			fmt.Printf("Failed to write file,err=%v\n", err.Error())
-			return
-		}
-
-		// 重置newfile的偏移量到文件头部
-		newfile.Seek(0, 0)
-		// 计算上传文件的sha1
-		fm.FileSha1 = util.FileSha1(newfile)
-
-		//把文件写入对象存储
-		// data, _ := os.Open(fm.Location)
-		// ctx := context.Background()
-		// mc := store.GetMC()
-		bucket := "userfile"
-		ossName := "/minio" + "/" + fm.FileSha1
-		// path := "/userfile" + ossName
-
-		// _, err = mc.PutObject(ctx, bucket, ossName, data, fm.FileSize, minio.PutObjectOptions{ContentType: "application/octet-stream"})
-		// if err != nil {
-		// 	fmt.Println("upload file to oss failed,err=", err)
-		// 	return
-		// }
-		// fm.Location = path
-
-		// 拼接mq信息
-		data := mq.TransferData{
-			FileHash:      fm.FileSha1,
-			CurLocation:   fm.Location,
-			DestLocation:  ossName,
-			DestStoreType: common.StoreOSS,
-			FileSize:      fm.FileSize,
-			Bucket:        bucket,
-		}
-		pubData, _ := json.Marshal(data)
-
-		// 推送到mq
-		suc := mq.Publush(config.TransExchangeName, config.TransOSSRoutingKey, pubData)
-		if !suc {
-			fmt.Println("send to mq failed")
-			return
-		}
-
-		// append到元信息队列中
-		// meta.UploadFmList(fm)
-
-		// 更新元数据到文件表 tbl_file
-		_ = meta.UpdateFmDb(fm)
-
-		// 更新信息到用户文件表 tbl_user_file
-		// BUG(myself): 前端页面FORM表单里没有username
-		r.ParseForm()
-		username := r.Form.Get("username")
-
-		suc = dblayer.UpdateUserFile(username, fm.FileSha1, fm.FileName, fm.FileSize)
-		if !suc {
-			w.Write([]byte("upload failed"))
-			return
-		}
-
-		// 302重定向到上传成功页面
-		http.Redirect(w, r, "/file/upload/suc", http.StatusFound)
+	if err != nil {
+		fmt.Printf("failed to get data,err=%v\n", err.Error())
+		return
 	}
+
+	// 初始化FileMeta
+	fm := meta.FileMeta{
+		FileName: file.Filename,
+		Location: "/tmp/" + file.Filename,
+		UpoadAt:  time.Now().Format("2006-01-02 15:04:05"),
+	}
+
+	// //新建一个本地文件的fd
+	// newfile, err := os.Create(fm.Location)
+	// if err != nil {
+	// 	fmt.Printf("Failed to create file,err=%v\n", err.Error())
+	// 	return
+	// }
+	// defer newfile.Close()
+
+	// // 复制文件 同时可以获取文件大小
+	// fm.FileSize, err = io.Copy(newfile, file)
+	// if err != nil {
+	// 	fmt.Printf("Failed to write file,err=%v\n", err.Error())
+	// 	return
+	// }
+
+	// 复制文件到本地
+	err = c.SaveUploadedFile(file, fm.Location)
+	if err != nil {
+		fmt.Printf("Failed to write file,err=%v\n", err.Error())
+		return
+	}
+
+	// // 重置newfile的偏移量到文件头部
+	// newfile.Seek(0, 0)
+
+	// 计算上传文件的sha1
+	fm.FileSha1 = util.FileSha1(fm.Location)
+
+	//把文件写入对象存储
+	// data, _ := os.Open(fm.Location)
+	// ctx := context.Background()
+	// mc := store.GetMC()
+	bucket := "userfile"
+	ossName := "/minio" + "/" + fm.FileSha1
+	// path := "/userfile" + ossName
+
+	// _, err = mc.PutObject(ctx, bucket, ossName, data, fm.FileSize, minio.PutObjectOptions{ContentType: "application/octet-stream"})
+	// if err != nil {
+	// 	fmt.Println("upload file to oss failed,err=", err)
+	// 	return
+	// }
+	// fm.Location = path
+
+	// 拼接mq信息
+	data := mq.TransferData{
+		FileHash:      fm.FileSha1,
+		CurLocation:   fm.Location,
+		DestLocation:  ossName,
+		DestStoreType: common.StoreOSS,
+		FileSize:      fm.FileSize,
+		Bucket:        bucket,
+	}
+	pubData, _ := json.Marshal(data)
+
+	// 推送到mq
+	suc := mq.Publush(config.TransExchangeName, config.TransOSSRoutingKey, pubData)
+	if !suc {
+		fmt.Println("send to mq failed")
+		return
+	}
+
+	// append到元信息队列中
+	// meta.UploadFmList(fm)
+
+	// 更新元数据到文件表 tbl_file
+	_ = meta.UpdateFmDb(fm)
+
+	// 更新信息到用户文件表 tbl_user_file
+	// BUG(myself): 前端页面FORM表单里没有username
+	username := c.Request.FormValue("username")
+
+	suc = dblayer.UpdateUserFile(username, fm.FileSha1, fm.FileName, fm.FileSize)
+	if !suc {
+		c.Data(http.StatusOK, "text/plain", []byte("update db failed!"))
+		return
+	}
+
+	// 302重定向到上传成功页面
+	c.Redirect(http.StatusFound, "/file/upload/suc")
 }
 
 // 上传文件成功
-func UploadSucHandler(w http.ResponseWriter, r *http.Request) {
-	io.WriteString(w, "Upload Success!")
+func UploadSucHandler(c *gin.Context) {
+	c.Data(http.StatusOK, "text/plain", []byte("update ok"))
 }
 
 // 返回元信息列表
 // 老的方法是从内存中获取
 // 新的方法从tbl_user_file中获取
-func GetFmListHandler(w http.ResponseWriter, r *http.Request) {
+func GetFmListHandler(c *gin.Context) {
 	// fmList := meta.GetFmList()
 
-	r.ParseForm()
-	username := r.Form.Get("username")
-	limit, _ := strconv.Atoi(r.Form.Get("limit"))
+	username := c.Request.FormValue("username")
+	limit, _ := strconv.Atoi(c.Request.FormValue("limit"))
 
 	fmList, err := dblayer.GetUserFileMetas(username, limit)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, "")
 		return
 	}
 
-	data, err := json.Marshal(fmList)
+	// data, err := json.Marshal(fmList)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, "")
 		return
 	}
-	w.Write(data)
+	c.JSON(http.StatusOK, fmList)
 
 }
 
 // 返回指定sha1的fm对象
-func GetFileMetaHander(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
+func GetFileMetaHander(c *gin.Context) {
 
-	// filehash:=r.Form["filehash"][0]
-	filehash := r.Form.Get("filehash")
+	filehash := c.Request.FormValue("filehash")
 	// fm := meta.GetFm(filehash)
 
 	// 从db中获取fm
 	fm, err := meta.GetFmDb(filehash)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, "")
 		return
 	}
 
-	data, err := json.Marshal(fm)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, "")
 		return
 	}
-	w.Write(data)
+	c.JSON(http.StatusOK, fm)
 
 }
 
