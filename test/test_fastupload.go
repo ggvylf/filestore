@@ -1,4 +1,4 @@
-package main
+package test
 
 import (
 	"io/ioutil"
@@ -9,13 +9,14 @@ import (
 
 var (
 	username  = "admin"
-	token     = "54eefa7dbd5bcf852c52fecd816f2a315c61832c"
-	targetURL = "http://localhost:28080/file/fastupload"
-	filehash  = "no_such_file_hash"
-	filename  = "just_for_test"
+	token     = "e922a114151039f67a9250bb9437772063dcae01"
+	targetURL = "http://127.0.0.1:8888/file/fastupload"
+	filehash  = "315d04cb9c699eb303fb8a39276d330737bbec70"
+	filename  = "a.txt"
+	filesize  = "29682"
 )
 
-func test_upload() {
+func test_fastupload() {
 
 	resp, err := http.PostForm(targetURL, url.Values{
 		"username": {username},
@@ -35,5 +36,5 @@ func test_upload() {
 }
 
 func main() {
-	test_upload()
+	test_fastupload()
 }

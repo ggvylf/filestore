@@ -28,14 +28,14 @@ func GetFmList() map[string]FileMeta {
 	return fmList
 }
 
+// 更新tbl_file的的filename
+func UpdateFmFilename(filehash, filename string) bool {
+	return dblayer.UpdateFmFilename(filehash, filename)
+}
+
 // 更新fileMetas列表
 func UploadFmList(fm FileMeta) {
 	fmList[fm.FileSha1] = fm
-}
-
-// 获取fileMetas中的FileMeta对象
-func GetFm(filehash string) FileMeta {
-	return fmList[filehash]
 }
 
 // 更新fm元数据到db

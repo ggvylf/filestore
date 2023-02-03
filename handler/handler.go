@@ -3,10 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
-	"net/url"
-	"os"
 	"strconv"
 	"time"
 
@@ -39,6 +36,7 @@ func UploadHandlerPost(c *gin.Context) {
 		FileName: file.Filename,
 		Location: "/tmp/" + file.Filename,
 		UpoadAt:  time.Now().Format("2006-01-02 15:04:05"),
+		FileSize: file.Size,
 	}
 
 	// //新建一个本地文件的fd
@@ -90,7 +88,7 @@ func UploadHandlerPost(c *gin.Context) {
 		CurLocation:   fm.Location,
 		DestLocation:  ossName,
 		DestStoreType: common.StoreOSS,
-		FileSize:      fm.FileSize,
+		FileSize:      file.Size,
 		Bucket:        bucket,
 	}
 	pubData, _ := json.Marshal(data)
@@ -172,111 +170,104 @@ func GetFileMetaHander(c *gin.Context) {
 
 }
 
-// 文件下载
-func DownFileHandler(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-	filehash := r.Form.Get("filehash")
+// // 从本地文件下载
+// // 已废弃
+// func DownFileHandler(c *gin.Context) {
 
-	fm := meta.GetFm(filehash)
+// 	filehash := c.Request.FormValue("filehash")
 
-	//小文件可以 大文件性能不行 这两种方法是等价的
-	//data, err := os.ReadFile(fm.Location)
-	//data, err := ioutil.ReadFile(fm.FileName)
+// 	fm := meta.GetFmDb(filehash)
 
-	// 先打开文件句柄再读取
-	fd, err := os.Open(fm.FileName)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	defer fd.Close()
+// 	//小文件可以 大文件性能不行 这两种方法是等价的
+// 	//data, err := os.ReadFile(fm.Location)
+// 	//data, err := ioutil.ReadFile(fm.FileName)
 
-	data, err := ioutil.ReadAll(fd)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+// 	// 先打开文件句柄再读取
+// 	fd, err := os.Open(fm.FileName)
+// 	if err != nil {
+// 		c.JSON(http.StatusInternalServerError, "")
+// 		return
+// 	}
+// 	defer fd.Close()
 
-	w.Header().Set("Content-Type", "application/octect")
-	// 避免中文文件名乱码
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename*=utf-8''%s", url.QueryEscape(fm.FileName)))
+// 	data, err := ioutil.ReadAll(fd)
+// 	if err != nil {
+// 		c.JSON(http.StatusInternalServerError, "")
 
-	w.Write(data)
+// 		return
+// 	}
 
-}
+// 	c.Writer.Header().Add("Content-Type", "application/octect")
+// 	// 避免中文文件名乱码
+// 	c.Writer.Header().Add("Content-Disposition", fmt.Sprintf("attachment; filename*=utf-8''%s", url.QueryEscape(fm.FileName)))
 
-// 更新fm 元数据
-func FmUpdateHandler(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-	fileHash := r.Form.Get("filehash")
-	opType := r.Form.Get("op")
-	newFileName := r.Form.Get("filename")
+// 	c.Data(http.StatusOK, "", data)
 
+// }
+
+// 更新fm的filename
+func FmUpdateHandler(c *gin.Context) {
+	fileHash := c.Request.FormValue("filehash")
+	opType := c.Request.FormValue("op")
+	newFileName := c.Request.FormValue("filename")
+
+	// 判断optype
 	if opType != "0" {
-		w.WriteHeader(http.StatusForbidden)
+		c.Writer.WriteHeader(http.StatusForbidden)
 		return
 	}
 
-	if r.Method != "POST" {
-		w.WriteHeader(http.StatusMethodNotAllowed)
+	// 更新tbl_file
+	suc := meta.UpdateFmFilename(fileHash, newFileName)
+	if !suc {
+		c.Writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	newFm := meta.GetFm(fileHash)
-	newFm.FileName = newFileName
-	meta.UploadFmList(newFm)
-
-	w.WriteHeader(http.StatusOK)
-	data, err := json.Marshal(newFm)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+	// 更新tbl_user_file
+	suc = dblayer.UpdateUserFilename(fileHash, newFileName)
+	if !suc {
+		c.Writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
-	w.Write(data)
+
+	c.JSON(http.StatusOK, "重命名成功")
 
 }
 
-// 删除fm和文件
-func FmDeleteHander(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-	fileHash := r.Form.Get("filehash")
+// // 删除fm和文件
+// func FmDeleteHander(c *gin.Context) {
+// 	fileHash := c.Request.FormValue("filehash")
 
-	fm := meta.GetFm(fileHash)
+// 	fm := meta.GetFmDb(fileHash)
 
-	// 这里注意要先删除文件 再删除元信息
-	ok := meta.DeleteFile(fm.Location)
-	if !ok {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("file not exists"))
-		return
-	}
+// 	// 这里注意要先删除文件 再删除元信息
+// 	ok := meta.DeleteFile(fm.Location)
+// 	if !ok {
+// 		c.JSON(http.StatusInternalServerError, []byte("file not exists"))
+// 		return
+// 	}
 
-	meta.DeleteFm(fileHash)
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("delete ok"))
+// 	meta.DeleteFm(fileHash)
+// 	c.JSON(http.StatusOK, []byte("delete ok"))
 
-}
+// }
 
 // 尝试秒传接口
 // 秒传
 // 1. 判断文件是否有记录在tbl_file中，
 // 2. 如果有记录，不用上传，直接更新tbl_user_file信息
 // 3. 如果没有记录，走/file/upload接口
-func TryFastUploadHandler(w http.ResponseWriter, r *http.Request) {
+func TryFastUploadHandler(c *gin.Context) {
 
 	// 解析参数
-	r.ParseForm()
-	username := r.Form.Get("username")
-	filehash := r.Form.Get("filehash")
-	filename := r.Form.Get("filename")
-	filesize, _ := strconv.Atoi(r.Form.Get("filesize"))
+	username := c.Request.FormValue("username")
+	filehash := c.Request.FormValue("filehash")
+	filename := c.Request.FormValue("filename")
+	filesize, _ := strconv.Atoi(c.Request.FormValue("filesize"))
 
 	// 查询tbl_file中相同filehash
 	fm, err := meta.GetFmDb(filehash)
-
-	fmt.Println(fm)
-	fmt.Println(err)
 
 	// 判断文件是否存在
 	if fm == nil || err != nil {
@@ -284,7 +275,7 @@ func TryFastUploadHandler(w http.ResponseWriter, r *http.Request) {
 			Code: -1,
 			Msg:  "秒传失败，使用普通上传接口",
 		}
-		w.Write(resp.JSONBytes())
+		c.JSON(http.StatusOK, resp)
 
 		return
 	}
@@ -296,7 +287,7 @@ func TryFastUploadHandler(w http.ResponseWriter, r *http.Request) {
 			Code: -2,
 			Msg:  "秒传失败，请稍后重试",
 		}
-		w.Write(resp.JSONBytes())
+		c.JSON(http.StatusOK, resp)
 
 	}
 
@@ -304,15 +295,14 @@ func TryFastUploadHandler(w http.ResponseWriter, r *http.Request) {
 		Code: 0,
 		Msg:  "秒传成功",
 	}
-	w.Write(resp.JSONBytes())
+	c.JSON(http.StatusOK, resp)
 
 }
 
 // 返回文件下载地址
-func DownloadUrlHandler(w http.ResponseWriter, r *http.Request) {
+func DownloadUrlHandler(c *gin.Context) {
 	// 获取文件hash
-	r.ParseForm()
-	filehash := r.Form.Get("filehash")
+	filehash := c.Request.FormValue("filehash")
 
 	//从tbl_file表中获取文件的信息
 	row, err := dblayer.GetFmDb(filehash)
@@ -321,7 +311,7 @@ func DownloadUrlHandler(w http.ResponseWriter, r *http.Request) {
 			Code: -1,
 			Msg:  "文件不存在",
 		}
-		w.Write(resp.JSONBytes())
+		c.JSON(http.StatusOK, resp)
 
 		return
 	}
@@ -332,6 +322,6 @@ func DownloadUrlHandler(w http.ResponseWriter, r *http.Request) {
 
 	// oss上
 	url := store.DownloadUrl(row.FileHash, row.FileName.String)
-	w.Write([]byte(url))
+	c.Data(http.StatusOK, "", []byte(url))
 
 }

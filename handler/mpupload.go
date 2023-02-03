@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"net/http"
@@ -12,8 +13,12 @@ import (
 	"time"
 
 	rPool "github.com/ggvylf/filestore/cache/redis"
+	"github.com/ggvylf/filestore/common"
+	"github.com/ggvylf/filestore/config"
 	dblayer "github.com/ggvylf/filestore/db"
+	"github.com/ggvylf/filestore/mq"
 	"github.com/ggvylf/filestore/util"
+	"github.com/gin-gonic/gin"
 	"github.com/gomodule/redigo/redis"
 )
 
@@ -31,14 +36,13 @@ type MultipartUploadInfo struct {
 
 // 初始化分块上传
 // 用redis保存相关信息
-func InitMultipartUploadHandler(w http.ResponseWriter, r *http.Request) {
+func InitMultipartUploadHandler(c *gin.Context) {
 	// 解析参数
-	r.ParseForm()
-	username := r.Form.Get("username")
-	filehash := r.Form.Get("filehash")
-	filesize, err := strconv.Atoi(r.Form.Get("filesize"))
+	username := c.Request.FormValue("username")
+	filehash := c.Request.FormValue("filehash")
+	filesize, err := strconv.Atoi(c.Request.FormValue("filesize"))
 	if err != nil {
-		w.Write(util.NewRespMsg(-1, "params invalid", nil).JSONBytes())
+		c.Data(http.StatusOK, "", util.NewRespMsg(-1, "params invalid", nil).JSONBytes())
 		return
 	}
 
@@ -74,16 +78,15 @@ func InitMultipartUploadHandler(w http.ResponseWriter, r *http.Request) {
 	// 6) "148883574"
 
 	// 返回响应信息
-	w.Write(util.NewRespMsg(0, "ok", mpInfo).JSONBytes())
+	c.Data(http.StatusOK, "", util.NewRespMsg(0, "ok", mpInfo).JSONBytes())
 
 }
 
 // 分块上传接口
-func UploadPartHandler(w http.ResponseWriter, r *http.Request) {
+func UploadPartHandler(c *gin.Context) {
 	// 解析参数
-	r.ParseForm()
-	uploadID := r.Form.Get("uploadid")
-	chunkIndex := r.Form.Get("index")
+	uploadID := c.Request.FormValue("uploadid")
+	chunkIndex := c.Request.FormValue("index")
 
 	// 获取redis连接
 	rConn := rPool.RedisPool().Get()
@@ -94,7 +97,7 @@ func UploadPartHandler(w http.ResponseWriter, r *http.Request) {
 	os.MkdirAll(path.Dir(fpath), 0744)
 	fd, err := os.Create(fpath)
 	if err != nil {
-		w.Write(util.NewRespMsg(-1, "create part failed", nil).JSONBytes())
+		c.Data(http.StatusOK, "", util.NewRespMsg(-1, "create part failed", nil).JSONBytes())
 		return
 
 	}
@@ -105,7 +108,7 @@ func UploadPartHandler(w http.ResponseWriter, r *http.Request) {
 	buf := make([]byte, 1024*1024) //1MB
 
 	for {
-		n, err := r.Body.Read(buf)
+		n, err := c.Request.Body.Read(buf)
 		fd.Write(buf[:n])
 		if err != nil {
 			break
@@ -116,18 +119,18 @@ func UploadPartHandler(w http.ResponseWriter, r *http.Request) {
 	rConn.Do("HSET", "MP_"+uploadID, "chkidx_"+chunkIndex, 1)
 
 	// 返回处理结果
-	w.Write(util.NewRespMsg(0, "ok", nil).JSONBytes())
+	c.Data(http.StatusOK, "", util.NewRespMsg(0, "ok", nil).JSONBytes())
 }
 
 // 分块合并接口
-func CompleteUploadHandler(w http.ResponseWriter, r *http.Request) {
+func CompleteUploadHandler(c *gin.Context) {
 	// 解析参数
-	r.ParseForm()
-	uploadid := r.Form.Get("uploadid")
-	username := r.Form.Get("username")
-	filehash := r.Form.Get("filehash")
-	filesize := r.Form.Get("filesize")
-	filename := r.Form.Get("filename")
+
+	uploadid := c.Request.FormValue("uploadid")
+	username := c.Request.FormValue("username")
+	filehash := c.Request.FormValue("filehash")
+	filesize := c.Request.FormValue("filesize")
+	filename := c.Request.FormValue("filename")
 
 	// 获取redis连接
 	rConn := rPool.RedisPool().Get()
@@ -137,7 +140,7 @@ func CompleteUploadHandler(w http.ResponseWriter, r *http.Request) {
 	// redis里查不到记录 直接返回
 	data, err := redis.Values(rConn.Do("HGETALL", "MP_"+uploadid))
 	if err != nil {
-		w.Write(util.NewRespMsg(-1, "Complete upload failed", nil).JSONBytes())
+		c.Data(http.StatusOK, "", util.NewRespMsg(-1, "Complete upload failed", nil).JSONBytes())
 		return
 
 	}
@@ -168,7 +171,7 @@ func CompleteUploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if total != chunkcount {
-		w.Write(util.NewRespMsg(-1, "chunkcount check failed", chunkcount).JSONBytes())
+		c.Data(http.StatusOK, "", util.NewRespMsg(-1, "chunkcount check failed", chunkcount).JSONBytes())
 		return
 	}
 
@@ -212,6 +215,29 @@ func CompleteUploadHandler(w http.ResponseWriter, r *http.Request) {
 	dblayer.InsertFmDb(filehash, name, fileaddr, int64(fsize))
 	dblayer.UpdateUserFile(username, filehash, name, int64(fsize))
 
+	// 拼接mq信息
+
+	bucket := "userfile"
+	ossName := "/minio" + "/" + filehash
+
+	msgdata := mq.TransferData{
+		FileHash:      filehash,
+		CurLocation:   fileaddr,
+		DestLocation:  ossName,
+		DestStoreType: common.StoreOSS,
+		FileSize:      int64(fsize),
+		Bucket:        bucket,
+	}
+	pubData, _ := json.Marshal(msgdata)
+
+	// 推送到mq
+	suc := mq.Publush(config.TransExchangeName, config.TransOSSRoutingKey, pubData)
+	if !suc {
+		fmt.Println("send to mq failed")
+		return
+	}
+
 	// 响应处理结果
-	w.Write(util.NewRespMsg(0, "ok", nil).JSONBytes())
+	c.Data(http.StatusOK, "", util.NewRespMsg(0, "ok", nil).JSONBytes())
+
 }

@@ -1,4 +1,4 @@
-package main
+package test
 
 import (
 	"bufio"
@@ -12,6 +12,14 @@ import (
 	"strconv"
 
 	jsonit "github.com/json-iterator/go"
+)
+
+var (
+	username = "admin"
+	token    = "e922a114151039f67a9250bb9437772063dcae01"
+	filehash = "fe1d6ccb2544698b5c567411306e659de0fe922d" //sha1sum filename
+	filesize = "148883574"
+	filename = "/home/ggvylf/Downloads/go1.19.2.linux-amd64.tar.gz"
 )
 
 func multipartUpload(filename string, targetURL string, chunkSize int) error {
@@ -76,11 +84,6 @@ func multipartUpload(filename string, targetURL string, chunkSize int) error {
 }
 
 func main() {
-	username := "admin"
-	token := "c439226a3f57e4f9ddc60a8e18d75d2963bbc5f5"
-	filehash := "fe1d6ccb2544698b5c567411306e659de0fe922d" //sha1sum filename
-	filesize := "148883574"
-	filename := "/home/ggvylf/Downloads/go1.19.2.linux-amd64.tar.gz"
 
 	// 1. 请求初始化分块上传接口
 	resp, err := http.PostForm(

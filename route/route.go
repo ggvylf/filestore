@@ -36,29 +36,31 @@ func Route() *gin.Engine {
 	router.GET("/file/upload", handler.UploadHandlerGet)
 	router.POST("/file/upload", handler.UploadHandlerPost)
 
-	// // 下载文件
-	// http.HandleFunc("/file/download", handler.DownFileHandler)
+	// 从本地下载文件 已废弃
+	// router.POST("/file/download", handler.DownFileHandler)
 
-	// // 更新文件
-	// http.HandleFunc("/file/update", handler.FmUpdateHandler)
+	// 更新文件
+	router.POST("/file/update", handler.FmUpdateHandler)
 
-	// // 删除文件
-	// http.HandleFunc("/file/delete", handler.FmDeleteHander)
+	// 删除文件
+	// TODO
+	// router.POST("/file/delete", handler.FmDeleteHander)
 
 	// 查看指定文件sha1对应的元信息
 	router.POST("/file/meta", handler.GetFileMetaHander)
 	router.POST("/file/meta/all", handler.GetFmListHandler)
 
-	// // 秒传
-	// http.HandleFunc("/file/fastupload", handler.AuthInterceptor(handler.TryFastUploadHandler))
+	// 秒传
+	router.POST("/file/fastupload", handler.TryFastUploadHandler)
 
-	// // 分块上传
-	// http.HandleFunc("/file/mpupload/init", handler.AuthInterceptor(handler.InitMultipartUploadHandler))
-	// http.HandleFunc("/file/mpupload/uppart", handler.AuthInterceptor(handler.UploadPartHandler))
-	// http.HandleFunc("/file/mpupload/complete", handler.AuthInterceptor(handler.CompleteUploadHandler))
+	// 分块上传
+	// TODO: 分块上传之前先走秒传接口
+	router.POST("/file/mpupload/init", handler.InitMultipartUploadHandler)
+	router.POST("/file/mpupload/uppart", handler.UploadPartHandler)
+	router.POST("/file/mpupload/complete", handler.CompleteUploadHandler)
 
-	// //获取文件下载的url
-	// http.HandleFunc("/file/downloadurl", handler.AuthInterceptor(handler.DownloadUrlHandler))
+	//获取文件下载的url
+	router.POST("/file/downloadurl", handler.DownloadUrlHandler)
 
 	return router
 }

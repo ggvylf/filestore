@@ -69,6 +69,31 @@ func GetFmDb(filehash string) (*TableFile, error) {
 	return &tfile, nil
 }
 
+// 更新tbl_file的filename字段
+func UpdateFmFilename(filehash string, filename string) bool {
+	stmt, err := mydb.DBConn().Prepare(
+		"update tbl_file set`file_name`=? where  `file_sha1`=? limit 1")
+	if err != nil {
+		fmt.Println("预编译sql失败, err:" + err.Error())
+		return false
+	}
+	defer stmt.Close()
+
+	ret, err := stmt.Exec(filename, filehash)
+	if err != nil {
+		fmt.Println(err.Error())
+		return false
+	}
+	if rf, err := ret.RowsAffected(); nil == err {
+		if rf <= 0 {
+			fmt.Printf("更新filename败, filehash:%s", filehash)
+			return false
+		}
+		return true
+	}
+	return false
+}
+
 // 更新tbl_file的fileaddr字段
 func UpdateFmAddr(filehash string, fileaddr string) bool {
 	stmt, err := mydb.DBConn().Prepare(

@@ -73,3 +73,29 @@ func GetUserFileMetas(username string, limit int) ([]UserFile, error) {
 	return UserFiles, nil
 
 }
+
+// 更新tbl_user_file的filename字段
+// TODO: 多用户的情况下 仅修改自己名下的文件名
+func UpdateUserFilename(filehash string, filename string) bool {
+	stmt, err := mydb.DBConn().Prepare(
+		"update tbl_user_file set`file_name`=? where  `file_sha1`=? limit 1")
+	if err != nil {
+		fmt.Println("预编译sql失败, err:" + err.Error())
+		return false
+	}
+	defer stmt.Close()
+
+	ret, err := stmt.Exec(filename, filehash)
+	if err != nil {
+		fmt.Println(err.Error())
+		return false
+	}
+	if rf, err := ret.RowsAffected(); nil == err {
+		if rf <= 0 {
+			fmt.Printf("更新file_name失败, filehash:%s\n", filehash)
+			return false
+		}
+		return true
+	}
+	return false
+}
