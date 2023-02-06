@@ -6,13 +6,15 @@ import (
 	"github.com/ggvylf/filestore/common"
 	"github.com/ggvylf/filestore/config"
 	dblayer "github.com/ggvylf/filestore/db"
+
+	proto "github.com/ggvylf/filestore/service/account/proto"
 	"github.com/ggvylf/filestore/util"
 )
 
 type User struct{}
 
 // 用户注册
-func Signup(ctx context.Context, req *proto.ReqSignup, resp *proto.RespSignup) error {
+func (u *User) Signup(ctx context.Context, req *proto.ReqSignup, resp *proto.RespSignup) error {
 
 	username := req.Username
 
