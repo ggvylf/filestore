@@ -2,12 +2,10 @@ package handler
 
 import (
 	"context"
-	"fmt"
-	"time"
 
 	"github.com/ggvylf/filestore/common"
 	"github.com/ggvylf/filestore/config"
-	dbcli "github.com/ggvylf/filestore/service/dbproxy"
+	dbcli "github.com/ggvylf/filestore/service/dbproxy/client"
 
 	proto "github.com/ggvylf/filestore/service/account/proto"
 	"github.com/ggvylf/filestore/util"
@@ -25,7 +23,7 @@ func (u *User) Signup(ctx context.Context, req *proto.ReqSignup, resp *proto.Res
 	// 对用户名和密码做简单的校验
 	if len(username) < 3 || len(passwd) < 5 {
 		resp.Code = common.StatusParamInvalid
-		resp.Message = "invalid parameter"
+		resp.Message = "用户参数非法"
 		return nil
 	}
 
@@ -33,16 +31,14 @@ func (u *User) Signup(ctx context.Context, req *proto.ReqSignup, resp *proto.Res
 	encpwd := util.Sha1([]byte(passwd + config.PasswordSalt))
 
 	// 用户名 密码写入数据库
-	suc := dbcli.UserSignup(username, encpwd)
-	if suc {
-		resp.Code = common.StatusOK
-		resp.Message = "user signup suc"
-
-	} else {
+	res, err := dbcli.UserSignup(username, encpwd)
+	if err != nil || !res.Suc {
 		resp.Code = common.StatusRegisterFailed
-		resp.Message = "user signup failed"
-	}
+		resp.Message = "用户注册失败"
 
+	}
+	resp.Code = common.StatusOK
+	resp.Message = "用户注册成功"
 	return nil
 
 }
@@ -54,18 +50,18 @@ func (u *User) Signin(ctx context.Context, req *proto.ReqSignin, resp *proto.Res
 	encpwd := util.Sha1([]byte(passwd + config.PasswordSalt))
 
 	// 从db校验用户名密码
-	pwdChecked := dbcli.UserSignin(username, encpwd)
-	if !pwdChecked {
+	pwdChecked, err := dbcli.UserSignin(username, encpwd)
+	if err != nil || !pwdChecked.Suc {
 		resp.Code = common.StatusLoginFailed
 		return nil
 	}
 
 	// 生成token
-	token := GenToken(username)
+	token := util.GenToken(username)
 
 	// 更新token库
-	suc := dblayer.UpdateToken(username, token)
-	if !suc {
+	res, err := dbcli.UpdateToken(username, token)
+	if err != nil || !res.Suc {
 
 		resp.Code = common.StatusServerError
 		return nil
@@ -73,31 +69,23 @@ func (u *User) Signin(ctx context.Context, req *proto.ReqSignin, resp *proto.Res
 
 	resp.Code = common.StatusOK
 	resp.Token = token
-	return nil
-}
 
-// 生成token
-func GenToken(username string) string {
-	// token=md5(usernaem+timestamp+token_salt)+timestamp[:8]
-	// len(token)=40
-	ts := fmt.Sprintf("%x", time.Now().Unix())
-	token_prefix := util.MD5([]byte(username + ts + config.PasswordSalt))
-	return token_prefix + ts[:8]
+	return nil
 }
 
 // 从tbl_user表中查询用户信息
 func (u *User) UserInfo(ctx context.Context, req *proto.ReqUserInfo, resp *proto.RespUserInfo) error {
 
 	// 查询db
-	dbresp, err := dbcli.GetUserInfo(req.Username)
-	if err != nil {
+	res, err := dbcli.GetUserInfo(req.Username)
+	if err != nil || !res.Suc {
 		resp.Code = common.StatusUserNotExists
 		resp.Message = "用户不存在"
 		return nil
 	}
 
-	//
-	user := dbcli.ToTableUser(dbresp.Data)
+	// 序列化用户信息
+	user := dbcli.ToTableUser(res.Data)
 
 	resp.Code = common.StatusOK
 	resp.Username = user.Username

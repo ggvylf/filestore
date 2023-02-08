@@ -5,12 +5,16 @@ import (
 	"crypto/sha1"
 	"encoding/binary"
 	"encoding/hex"
+	"fmt"
 	"hash"
 	"io"
 	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
+	"time"
+
+	"github.com/ggvylf/filestore/config"
 )
 
 type Sha1Stream struct {
@@ -160,4 +164,13 @@ func FileSortForStringWithNum(data []string) ([]string, error) {
 	})
 
 	return data, lastErr
+}
+
+// 生成token
+func GenToken(username string) string {
+	// token=md5(usernaem+timestamp+token_salt)+timestamp[:8]
+	// len(token)=40
+	ts := fmt.Sprintf("%x", time.Now().Unix())
+	token_prefix := MD5([]byte(username + ts + config.PasswordSalt))
+	return token_prefix + ts[:8]
 }

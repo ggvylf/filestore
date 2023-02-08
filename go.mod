@@ -10,6 +10,7 @@ require (
 	github.com/json-iterator/go v1.1.12
 	github.com/micro/cli v0.2.0
 	github.com/minio/minio-go/v7 v7.0.47
+	github.com/mitchellh/mapstructure v1.3.3
 	github.com/rabbitmq/amqp091-go v1.6.0
 	go-micro.dev/v4 v4.9.0
 	google.golang.org/protobuf v1.28.1

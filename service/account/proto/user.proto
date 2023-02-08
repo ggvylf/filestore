@@ -16,7 +16,7 @@ service UserService {
 	rpc UserInfo(ReqUserInfo) returns (RespUserInfo) {}
 
 	// 获取用户文件
-	rpc UserFiles(ReqUserFiles) returns (RespUserFiles) {}
+	rpc UserFilesList(ReqUserFile) returns (RespUserFile) {}
 
 	// 文件重命名
 	rpc UserFileRename(ReqUserFileRename) returns (RespUserFileRename) {}
@@ -67,12 +67,13 @@ message RespUserInfo {
 
 
 // 获取用户文件列表
-message ReqUserFiles {
-	string username=1;
+message ReqUserFile {
+    string username = 1;
+    int32 limit = 2;
 }
 
-message RespUserFiles {
-	int32 code = 1;
+message RespUserFile {
+    int32 code = 1;
     string message =2;
     bytes fileData = 3;
 }

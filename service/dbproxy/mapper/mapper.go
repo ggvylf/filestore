@@ -7,6 +7,7 @@ import (
 	"github.com/ggvylf/filestore/service/dbproxy/orm"
 )
 
+// 定义orm的router
 var funcs = map[string]interface{}{
 	"/file/OnFileUploadFinished": orm.OnFileUploadFinished,
 	"/file/GetFileMeta":          orm.GetFileMeta,
@@ -26,6 +27,7 @@ var funcs = map[string]interface{}{
 	"/ufile/QueryUserFileMeta":        orm.QueryUserFileMeta,
 }
 
+// 调用函数
 func FuncCall(name string, params ...interface{}) (result []reflect.Value, err error) {
 	if _, ok := funcs[name]; !ok {
 		err = errors.New("函数名不存在.")
