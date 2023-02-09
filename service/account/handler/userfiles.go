@@ -18,6 +18,7 @@ func (u *User) UserFiles(ctx context.Context, req *proto.ReqUserFile, res *proto
 		return err
 	}
 
+	// 格式化数据
 	userFiles := dbcli.ToTableUserFiles(dbResp.Data)
 	data, err := json.Marshal(userFiles)
 	if err != nil {
