@@ -9,17 +9,21 @@ import (
 
 // 定义orm的router
 var funcs = map[string]interface{}{
+
+	// 文件上传
 	"/file/OnFileUploadFinished": orm.OnFileUploadFinished,
 	"/file/GetFileMeta":          orm.GetFileMeta,
 	"/file/GetFileMetaList":      orm.GetFileMetaList,
 	"/file/UpdateFileLocation":   orm.UpdateFileLocation,
 
+	// 用户相关
 	"/user/UserSignup":  orm.UserSignup,
 	"/user/UserSignin":  orm.UserSignin,
 	"/user/UpdateToken": orm.UpdateToken,
 	"/user/GetUserInfo": orm.GetUserInfo,
 	"/user/UserExist":   orm.UserExist,
 
+	// 用户文件
 	"/ufile/OnUserFileUploadFinished": orm.OnUserFileUploadFinished,
 	"/ufile/QueryUserFileMetas":       orm.QueryUserFileMetas,
 	"/ufile/DeleteUserFile":           orm.DeleteUserFile,
