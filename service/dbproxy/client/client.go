@@ -98,7 +98,7 @@ func ToTableUserFiles(src interface{}) []orm.TableUserFile {
 	return ufile
 }
 
-// 获取fm信息
+// 从tbl_file获取fm信息
 func GetFileMeta(filehash string) (*orm.ExecResult, error) {
 	uInfo, _ := json.Marshal([]interface{}{filehash})
 	res, err := execAction("/file/GetFileMeta", uInfo)

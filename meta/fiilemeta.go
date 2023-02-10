@@ -12,7 +12,7 @@ type FileMeta struct {
 	FileName string
 	FileSize int64
 	Location string
-	UpoadAt  string
+	UploadAt string
 }
 
 // 文件metatdata列表 key是FileSha1

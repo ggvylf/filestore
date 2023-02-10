@@ -2,11 +2,11 @@ package config
 
 const (
 	// OSSBucket : oss bucket名
-	OSSBucket = "buckettest-filestore2"
+	OSSBucket = "userfile"
 	// OSSEndpoint : oss endpoint
-	OSSEndpoint = "oss-cn-shenzhen.aliyuncs.com"
+	OSSEndpoint = "127.0.0.1:9000"
 	// OSSAccesskeyID : oss访问key
-	OSSAccesskeyID = "<你的AccesskeyId>"
+	OSSAccesskeyID = "KwoLR7sWIdp8LZAt"
 	// OSSAccessKeySecret : oss访问key secret
-	OSSAccessKeySecret = "<你的AccessKeySecret>"
+	OSSAccessKeySecret = "6sZAYToCkY7Uhl0hZbJjIgewReVEyLXt"
 )

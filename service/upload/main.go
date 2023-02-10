@@ -1,15 +1,41 @@
 package main
 
 import (
-	"github.com/fvbock/endless"
-	"github.com/ggvylf/filestore/config"
-	"github.com/ggvylf/filestore/route"
+	"fmt"
+	"time"
+
+	cfg "github.com/ggvylf/filestore/service/upload/config"
+	handler "github.com/ggvylf/filestore/service/upload/handler"
+	upProto "github.com/ggvylf/filestore/service/upload/proto"
+	"github.com/ggvylf/filestore/service/upload/route"
+	"go-micro.dev/v4"
 )
 
-func main() {
-	// 加载路由表
-	router := route.Route()
-	// 优雅退出
-	endless.ListenAndServe(config.UploadServiceHost, router)
+func startRpcService() {
+	service := micro.NewService(
+		micro.Name("go.micro.service.upload"), // 服务名称
+		micro.RegisterTTL(time.Second*10),     // TTL指定从上一次心跳间隔起，超过这个时间服务会被服务发现移除
+		micro.RegisterInterval(time.Second*5), // 让服务在指定时间内重新注册，保持TTL获取的注册时间有效
+	)
+	// 初始化服务
+	service.Init()
 
+	// 服务注册
+	upProto.RegisterUploadServiceHandler(service.Server(), new(handler.Upload))
+	if err := service.Run(); err != nil {
+		fmt.Println(err)
+	}
+}
+
+func startApiService() {
+	router := route.Router()
+	router.Run(cfg.UploadServiceHost)
+}
+
+func main() {
+	// api 服务
+	go startApiService()
+
+	// rpc 服务
+	startRpcService()
 }

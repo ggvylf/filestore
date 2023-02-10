@@ -4,11 +4,13 @@ package proto;
 option go_package="../proto";
 
 
+// client向server请求具体的sql执行
 service DBProxyService {
     // 请求执行sql动作
     rpc ExecuteAction(ReqExec) returns (RespExec) {}
 }
 
+// 是否顺序执行的tag和请求的参数
 message SingleAction {
 	string name = 1;
 	bytes params = 2; // 请求参数列表, json-encoded

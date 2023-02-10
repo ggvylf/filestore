@@ -35,7 +35,7 @@ func UploadHandlerPost(c *gin.Context) {
 	fm := meta.FileMeta{
 		FileName: file.Filename,
 		Location: "/tmp/" + file.Filename,
-		UpoadAt:  time.Now().Format("2006-01-02 15:04:05"),
+		UploadAt: time.Now().Format("2006-01-02 15:04:05"),
 		FileSize: file.Size,
 	}
 

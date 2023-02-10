@@ -11,7 +11,7 @@ import (
 )
 
 // UserFiles : 获取用户文件列表
-func (u *User) UserFiles(ctx context.Context, req *proto.ReqUserFile, res *proto.RespUserFile) error {
+func (u *User) UserFilesList(ctx context.Context, req *proto.ReqUserFile, res *proto.RespUserFile) error {
 	dbResp, err := dbcli.QueryUserFileMetas(req.Username, int(req.Limit))
 	if err != nil || !dbResp.Suc {
 		res.Code = common.StatusServerError
