@@ -4,14 +4,15 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ggvylf/filestore/config"
 	"github.com/gomodule/redigo/redis"
 )
 
 var (
 	pool      *redis.Pool
-	redisHost = "127.0.0.1:6379"
-	redisPass = "123456"
-	redisDb   = "0"
+	redisHost = config.RedisHost
+	redisPass = config.RedisPass
+	redisDb   = config.RedisDb
 )
 
 func init() {

@@ -1,18 +1,25 @@
 package handler
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"math"
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/garyburd/redigo/redis"
+	rPool "github.com/ggvylf/filestore/cache/redis"
+	"github.com/ggvylf/filestore/common"
 	"github.com/ggvylf/filestore/config"
+	"github.com/ggvylf/filestore/mq"
+	dbcli "github.com/ggvylf/filestore/service/dbproxy/client"
+	"github.com/ggvylf/filestore/util"
 	"github.com/gin-gonic/gin"
 )
 
@@ -23,10 +30,6 @@ type MultipartUploadInfo struct {
 	UploadID   string
 	ChunkSize  int
 	ChunkCount int
-}
-
-func init() {
-	os.MkdirAll(config.TempPartRootDir, 0744)
 }
 
 // InitialMultipartUploadHandler : 初始化分块上传
@@ -75,32 +78,29 @@ func InitialMultipartUploadHandler(c *gin.Context) {
 
 // UploadPartHandler : 上传文件分块
 func UploadPartHandler(c *gin.Context) {
-	// 1. 解析用户请求参数
-	//	username := c.Request.FormValue("username")
+	// 解析参数
 	uploadID := c.Request.FormValue("uploadid")
 	chunkIndex := c.Request.FormValue("index")
 
-	// 2. 获得redis连接池中的一个连接
+	// 获取redis连接
 	rConn := rPool.RedisPool().Get()
 	defer rConn.Close()
 
-	// 3. 获得文件句柄，用于存储分块内容
-	fpath := config.TempPartRootDir + uploadID + "/" + chunkIndex
+	// 创建文件句柄
+	fpath := config.TempPartRootDir + "/" + uploadID + "/" + chunkIndex
 	os.MkdirAll(path.Dir(fpath), 0744)
 	fd, err := os.Create(fpath)
 	if err != nil {
-		c.JSON(
-			http.StatusOK,
-			gin.H{
-				"code": 0,
-				"msg":  "Upload part failed",
-				"data": nil,
-			})
+		c.Data(http.StatusOK, "", util.NewRespMsg(-1, "create part dir failed", nil).JSONBytes())
 		return
+
 	}
+
 	defer fd.Close()
 
-	buf := make([]byte, 1024*1024)
+	// 写入文件
+	buf := make([]byte, 1024*1024) //1MB
+
 	for {
 		n, err := c.Request.Body.Read(buf)
 		fd.Write(buf[:n])
@@ -109,96 +109,116 @@ func UploadPartHandler(c *gin.Context) {
 		}
 	}
 
-	// 4. 更新redis缓存状态
+	// 更新redis中的分块记录
 	rConn.Do("HSET", "MP_"+uploadID, "chkidx_"+chunkIndex, 1)
 
-	// 5. 返回处理结果到客户端
-	c.JSON(
-		http.StatusOK,
-		gin.H{
-			"code": 0,
-			"msg":  "OK",
-			"data": nil,
-		})
+	// 返回处理结果
+	c.Data(http.StatusOK, "", util.NewRespMsg(0, "ok", nil).JSONBytes())
+
 }
 
 // CompleteUploadHandler : 通知上传合并
 func CompleteUploadHandler(c *gin.Context) {
-	// 1. 解析请求参数
-	upid := c.Request.FormValue("uploadid")
+
+	uploadid := c.Request.FormValue("uploadid")
 	username := c.Request.FormValue("username")
 	filehash := c.Request.FormValue("filehash")
 	filesize := c.Request.FormValue("filesize")
 	filename := c.Request.FormValue("filename")
 
-	// 2. 获得redis连接池中的一个连接
+	// 获取redis连接
 	rConn := rPool.RedisPool().Get()
 	defer rConn.Close()
 
-	// 3. 通过uploadid查询redis并判断是否所有分块上传完成
-	data, err := redis.Values(rConn.Do("HGETALL", "MP_"+upid))
+	// 通过uploadid查询redis 判断分块是否全部上传完成
+	// redis里查不到记录 直接返回
+	data, err := redis.Values(rConn.Do("HGETALL", "MP_"+uploadid))
 	if err != nil {
-		c.JSON(
-			http.StatusOK,
-			gin.H{
-				"code": -1,
-				"msg":  "服务错误",
-				"data": nil,
-			})
+		c.Data(http.StatusOK, "", util.NewRespMsg(-1, "Complete upload failed", nil).JSONBytes())
 		return
+
 	}
-	totalCount := 0
-	chunkCount := 0
+
+	// 验证redis中的分块记录
+
+	// 期望的数量
+	total := 0
+
+	// 实际分块的数量
+	chunkcount := 0
+
+	// data中的格式是k1 v1 k2 v2
 	for i := 0; i < len(data); i += 2 {
+
 		k := string(data[i].([]byte))
 		v := string(data[i+1].([]byte))
+
+		// 获取期望数量
 		if k == "chunkcount" {
-			totalCount, _ = strconv.Atoi(v)
+			total, _ = strconv.Atoi(v)
+
+			// 实际分块的数量
 		} else if strings.HasPrefix(k, "chkidx_") && v == "1" {
-			chunkCount++
+			chunkcount++
+		}
+
+	}
+
+	if total != chunkcount {
+		c.Data(http.StatusOK, "", util.NewRespMsg(-1, "chunkcount check failed", chunkcount).JSONBytes())
+		return
+	}
+
+	// 合并分块
+	fpath := config.TempPartRootDir + "/" + uploadid + "/"
+	_, fname := path.Split(filename)
+	fileaddr := fmt.Sprintf("/tmp/" + fname)
+
+	fd, _ := os.OpenFile(fileaddr, os.O_CREATE|os.O_WRONLY, 0644)
+	defer fd.Close()
+
+	files, _ := filepath.Glob(fpath + "*")
+	// fmt.Println(files)
+	filessorted, err := util.FileSortForStringWithNum(files)
+	if err != nil {
+		fmt.Println("files sort failed,err=", err)
+	}
+	// fmt.Println(filessorted)
+
+	for _, f := range filessorted {
+		// 排除目标文件在同目录下
+		if filepath.Base(f) == fname {
+			break
+		}
+		data, err := os.ReadFile(f)
+		if err != nil {
+			fmt.Println("read part file err=", err)
+		}
+		_, err = fd.Write(data)
+		if err != nil {
+			fmt.Println("write part file err=", err)
 		}
 	}
-	if totalCount != chunkCount {
-		c.JSON(
-			http.StatusOK,
-			gin.H{
-				"code": -2,
-				"msg":  "分块不完整",
-				"data": nil,
-			})
-		return
-	}
 
-	// 4. TODO：合并分块, 可以将ceph当临时存储，合并时将文件写入ceph;
-	// 也可以不用在本地进行合并，转移的时候将分块append到ceph/oss即可
-	srcPath := config.TempPartRootDir + upid + "/"
-	destPath := cfg.TempLocalRootDir + filehash
-	cmd := fmt.Sprintf("cd %s && ls | sort -n | xargs cat > %s", srcPath, destPath)
-	mergeRes, err := util.ExecLinuxShell(cmd)
-	if err != nil {
-		log.Println(err)
-		c.JSON(
-			http.StatusOK,
-			gin.H{
-				"code": -2,
-				"msg":  "合并失败",
-				"data": nil,
-			})
-		return
-	}
-	log.Println(mergeRes)
+	fmt.Println("complete file suc")
 
-	// 5. 更新唯一文件表及用户文件表
+	// 更新tbl_file和tbl_user_file
 	fsize, _ := strconv.Atoi(filesize)
+	name := filepath.Base(filename)
 
-	fmeta := dbcli.FileMeta{
+	fm := dbcli.FileMeta{
 		FileSha1: filehash,
-		FileName: filename,
+		FileName: name,
 		FileSize: int64(fsize),
-		Location: destPath,
+		Location: fileaddr,
 	}
-	_, ferr := dbcli.OnFileUploadFinished(fmeta)
-	_, uferr := dbcli.OnUserFileUploadFinished(username, fmeta)
+
+	// 更新tbl_file
+	_, ferr := dbcli.OnFileUploadFinished(fm)
+
+	// 更新tbl_user_file
+	_, uferr := dbcli.OnUserFileUploadFinished(username, fm)
+
 	if ferr != nil || uferr != nil {
 		log.Println(err)
 		c.JSON(
@@ -211,12 +231,28 @@ func CompleteUploadHandler(c *gin.Context) {
 		return
 	}
 
-	// 6. 响应处理结果
-	c.JSON(
-		http.StatusOK,
-		gin.H{
-			"code": 0,
-			"msg":  "OK",
-			"data": nil,
-		})
+	// 拼接mq信息
+	bucket := config.OSSBucket
+	ossName := config.OSSRootDir + "/" + filehash
+
+	msgdata := mq.TransferData{
+		FileHash:      filehash,
+		CurLocation:   fileaddr,
+		DestLocation:  ossName,
+		DestStoreType: common.StoreOSS,
+		FileSize:      int64(fsize),
+		Bucket:        bucket,
+	}
+	pubData, _ := json.Marshal(msgdata)
+
+	// 推送到mq
+	suc := mq.Publush(config.TransExchangeName, config.TransOSSRoutingKey, pubData)
+	if !suc {
+		fmt.Println("send to mq failed")
+		return
+	}
+
+	// 响应处理结果
+	c.Data(http.StatusOK, "", util.NewRespMsg(0, "ok", nil).JSONBytes())
+
 }

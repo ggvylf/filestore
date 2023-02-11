@@ -201,7 +201,7 @@ func TryFastUploadHandler(c *gin.Context) {
 			Code: -1,
 			Msg:  "秒传失败，请访问普通上传接口",
 		}
-		c.Data(http.StatusOK, "application/json", resp.JSONBytes())
+		c.JSON(http.StatusOK, resp)
 		return
 	}
 
@@ -214,13 +214,13 @@ func TryFastUploadHandler(c *gin.Context) {
 			Code: 0,
 			Msg:  "秒传成功",
 		}
-		c.Data(http.StatusOK, "application/json", resp.JSONBytes())
+		c.JSON(http.StatusOK, resp)
 		return
 	}
 	resp := util.RespMsg{
 		Code: -2,
 		Msg:  "秒传失败，请稍后重试",
 	}
-	c.Data(http.StatusOK, "application/json", resp.JSONBytes())
+	c.JSON(http.StatusOK, resp)
 	return
 }
