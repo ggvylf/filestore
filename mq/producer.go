@@ -9,37 +9,9 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-var conn *amqp.Connection
-var channel *amqp.Channel
-
-// 初始化channel
-func initChannle() bool {
-	if channel != nil {
-		return true
-	}
-
-	// 获取连接
-	conn, err := amqp.Dial(config.RabbitURL)
-	if err != nil {
-		fmt.Println("conn mq failed,err=", err.Error())
-		return false
-	}
-	// defer conn.Close()
-
-	// 获取channel
-	channel, err = conn.Channel()
-	if err != nil {
-		fmt.Println("mq channel failed,err=", err.Error())
-		return false
-	}
-	// defer channel.Close()
-
-	return true
-}
-
 // 投递消息到mq
 func Publush(exchange, routingKey string, msg []byte) bool {
-	if !initChannle() {
+	if !initChannel(config.RabbitURL) {
 		return false
 	}
 

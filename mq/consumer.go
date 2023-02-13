@@ -2,6 +2,8 @@ package mq
 
 import (
 	"fmt"
+
+	"github.com/ggvylf/filestore/config"
 )
 
 var done chan bool
@@ -9,7 +11,7 @@ var done chan bool
 // 消费消息
 func StartConsume(queneName, consuseName string, callback func(msg []byte) bool) {
 
-	if !initChannle() {
+	if !initChannel(config.RabbitURL) {
 		return
 	}
 

@@ -6,7 +6,6 @@ import (
 
 	"github.com/ggvylf/filestore/service/dbproxy/orm"
 	dbProto "github.com/ggvylf/filestore/service/dbproxy/proto"
-
 	"github.com/mitchellh/mapstructure"
 	"go-micro.dev/v4"
 )
@@ -25,12 +24,9 @@ var (
 	dbCli dbProto.DBProxyService
 )
 
-func init() {
-	service := micro.NewService()
-	// 初始化， 解析命令行参数等
-	service.Init()
-	// 初始化一个dbproxy服务的客户端
-	dbCli = dbProto.NewDBProxyService("go.micro.service.dbproxy", service.Client())
+// 初始化dbproxy微服务的client客户端
+func Init(serivce micro.Service) {
+	dbCli = dbProto.NewDBProxyService("go.micro.service.dbproxy", serivce.Client())
 }
 
 // execAction : 向dbproxy请求执行action

@@ -7,17 +7,24 @@ import (
 	cfg "github.com/ggvylf/filestore/service/download/config"
 	dlHandler "github.com/ggvylf/filestore/service/download/handler"
 	"github.com/ggvylf/filestore/service/download/route"
+	"github.com/go-micro/plugins/v4/registry/consul"
+	"go-micro.dev/v4"
+	"go-micro.dev/v4/registry"
 
 	dlProto "github.com/ggvylf/filestore/service/download/proto"
-
-	"go-micro.dev/v4"
 )
 
 func startRpcService() {
+
+	consul := consul.NewRegistry(
+		registry.Addrs("127.0.0.1:8500"),
+	)
+
 	service := micro.NewService(
 		micro.Name("go.micro.service.download"), // 在注册中心中的服务名称
 		micro.RegisterTTL(time.Second*10),
 		micro.RegisterInterval(time.Second*5),
+		micro.Registry(consul),
 	)
 	service.Init()
 
