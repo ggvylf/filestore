@@ -21,6 +21,7 @@ func DownloadURLHandler(c *gin.Context) {
 	// 从文件表查找记录
 	dbResp, err := dbcli.GetFileMeta(filehash)
 	if err != nil {
+		log.Println(err)
 		c.JSON(
 			http.StatusOK,
 			gin.H{

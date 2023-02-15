@@ -12,5 +12,5 @@ const (
 	// OSSRootDir : OSS的存储路径prefix
 	OSSRootDir = "/minio"
 	// CurrentStoreType : 设置当前文件的存储类型
-	CurrentStoreType = common.StoreLocal
+	CurrentStoreType = common.StoreOSS
 )

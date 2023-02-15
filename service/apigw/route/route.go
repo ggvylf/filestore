@@ -2,6 +2,7 @@ package route
 
 import (
 	"github.com/ggvylf/filestore/service/apigw/handler"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -46,6 +47,14 @@ func Router() *gin.Engine {
 	// https://github.com/gin-gonic/examples/blob/master/assets-in-binary/example02/README.md
 	// router.Use(static.Serve("/static/", BinaryFileSystem("static")))
 	router.Static("/static", "../../static")
+
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:  []string{"*"}, // []string{"http://127.0.0.1:8080"},
+		AllowMethods:  []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:  []string{"Origin", "Range", "x-requested-with", "content-Type"},
+		ExposeHeaders: []string{"Content-Length", "Accept-Ranges", "Content-Range", "Content-Disposition", "Authorization"},
+		// AllowCredentials: true,
+	}))
 
 	// 用户注册
 	router.GET("/user/signup", handler.UserSignUpGet)

@@ -5,14 +5,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ggvylf/filestore/config"
 	dblayer "github.com/ggvylf/filestore/db"
 	"github.com/ggvylf/filestore/util"
 	"github.com/gin-gonic/gin"
-)
-
-var (
-	pwd_salt   = "mysalt"
-	token_salt = "mytoken"
 )
 
 // 用户注册
@@ -35,7 +31,7 @@ func UserSignUpPost(c *gin.Context) {
 	}
 
 	// 加密密码
-	encpwd := util.Sha1([]byte(passwd + pwd_salt))
+	encpwd := util.Sha1([]byte(passwd + config.PasswordSalt))
 
 	// 用户名 密码写入数据库
 	suc := dblayer.UserSignup(username, encpwd)
@@ -61,7 +57,7 @@ func UserSigninGet(c *gin.Context) {
 func UserSigninPost(c *gin.Context) {
 	username := c.Request.FormValue("username")
 	passwd := c.Request.FormValue("password")
-	encpwd := util.Sha1([]byte(passwd + pwd_salt))
+	encpwd := util.Sha1([]byte(passwd + config.PasswordSalt))
 
 	// 从db校验用户名密码
 	pwdChecked := dblayer.UserSignin(username, encpwd)
@@ -75,6 +71,7 @@ func UserSigninPost(c *gin.Context) {
 
 	// 生成token
 	token := GenToken(username)
+
 	// 更新token库
 	suc := dblayer.UpdateToken(username, token)
 	if !suc {
@@ -93,8 +90,8 @@ func UserSigninPost(c *gin.Context) {
 			Location:      "http://" + c.Request.Host + "/static/view/home.html",
 			Username:      username,
 			Token:         token,
-			DownloadEntry: "http://" + c.Request.Host,
-			UploadEntry:   "http://" + c.Request.Host,
+			DownloadEntry: config.DownloadLBHost,
+			UploadEntry:   config.UploadLBHost,
 		},
 	}
 
@@ -108,7 +105,7 @@ func GenToken(username string) string {
 	// token=md5(usernaem+timestamp+token_salt)+timestamp[:8]
 	// len(token)=40
 	ts := fmt.Sprintf("%x", time.Now().Unix())
-	token_prefix := util.MD5([]byte(username + ts + token_salt))
+	token_prefix := util.MD5([]byte(username + ts + config.PasswordSalt))
 	return token_prefix + ts[:8]
 }
 

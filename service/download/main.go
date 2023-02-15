@@ -12,6 +12,8 @@ import (
 	"go-micro.dev/v4/registry"
 
 	dlProto "github.com/ggvylf/filestore/service/download/proto"
+
+	dbproxy "github.com/ggvylf/filestore/service/dbproxy/client"
 )
 
 func startRpcService() {
@@ -27,6 +29,9 @@ func startRpcService() {
 		micro.Registry(consul),
 	)
 	service.Init()
+
+	// 初始化dbproxy client
+	dbproxy.Init(service)
 
 	dlProto.RegisterDownloadServiceHandler(service.Server(), new(dlHandler.Download))
 	if err := service.Run(); err != nil {
