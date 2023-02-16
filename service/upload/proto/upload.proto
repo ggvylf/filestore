@@ -5,13 +5,13 @@ option go_package="../proto";
 
 service UploadService {
     // 获取上传入口地址
-    rpc UploadEntry(ReqEntry) returns (RespEntry) {}
+    rpc UploadEntry(ReqUploadEntry) returns (RespUploadEntry) {}
 }
 
-message ReqEntry {
+message ReqUploadEntry {
 }
 
-message RespEntry {
+message RespUploadEntry {
     int32 code = 1;
     string message = 2;
     string entry = 3;

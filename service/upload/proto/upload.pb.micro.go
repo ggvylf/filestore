@@ -37,7 +37,7 @@ func NewUploadServiceEndpoints() []*api.Endpoint {
 
 type UploadService interface {
 	// 获取上传入口地址
-	UploadEntry(ctx context.Context, in *ReqEntry, opts ...client.CallOption) (*RespEntry, error)
+	UploadEntry(ctx context.Context, in *ReqUploadEntry, opts ...client.CallOption) (*RespUploadEntry, error)
 }
 
 type uploadService struct {
@@ -52,9 +52,9 @@ func NewUploadService(name string, c client.Client) UploadService {
 	}
 }
 
-func (c *uploadService) UploadEntry(ctx context.Context, in *ReqEntry, opts ...client.CallOption) (*RespEntry, error) {
+func (c *uploadService) UploadEntry(ctx context.Context, in *ReqUploadEntry, opts ...client.CallOption) (*RespUploadEntry, error) {
 	req := c.c.NewRequest(c.name, "UploadService.UploadEntry", in)
-	out := new(RespEntry)
+	out := new(RespUploadEntry)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
 		return nil, err
@@ -66,12 +66,12 @@ func (c *uploadService) UploadEntry(ctx context.Context, in *ReqEntry, opts ...c
 
 type UploadServiceHandler interface {
 	// 获取上传入口地址
-	UploadEntry(context.Context, *ReqEntry, *RespEntry) error
+	UploadEntry(context.Context, *ReqUploadEntry, *RespUploadEntry) error
 }
 
 func RegisterUploadServiceHandler(s server.Server, hdlr UploadServiceHandler, opts ...server.HandlerOption) error {
 	type uploadService interface {
-		UploadEntry(ctx context.Context, in *ReqEntry, out *RespEntry) error
+		UploadEntry(ctx context.Context, in *ReqUploadEntry, out *RespUploadEntry) error
 	}
 	type UploadService struct {
 		uploadService
@@ -84,6 +84,6 @@ type uploadServiceHandler struct {
 	UploadServiceHandler
 }
 
-func (h *uploadServiceHandler) UploadEntry(ctx context.Context, in *ReqEntry, out *RespEntry) error {
+func (h *uploadServiceHandler) UploadEntry(ctx context.Context, in *ReqUploadEntry, out *RespUploadEntry) error {
 	return h.UploadServiceHandler.UploadEntry(ctx, in, out)
 }

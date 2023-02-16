@@ -1,4 +1,4 @@
-package test
+package main
 
 import (
 	"bufio"
@@ -11,15 +11,8 @@ import (
 	"os"
 	"strconv"
 
+	config "github.com/ggvylf/filestore/test/config"
 	jsonit "github.com/json-iterator/go"
-)
-
-var (
-	username = "admin"
-	token    = "e922a114151039f67a9250bb9437772063dcae01"
-	filehash = "fe1d6ccb2544698b5c567411306e659de0fe922d" //sha1sum filename
-	filesize = "148883574"
-	filename = "/home/ggvylf/Downloads/go1.19.2.linux-amd64.tar.gz"
 )
 
 func multipartUpload(filename string, targetURL string, chunkSize int) error {
@@ -87,12 +80,12 @@ func main() {
 
 	// 1. 请求初始化分块上传接口
 	resp, err := http.PostForm(
-		"http://127.0.0.1:8888/file/mpupload/init",
+		config.MpinitURL,
 		url.Values{
-			"username": {username},
-			"token":    {token},
-			"filehash": {filehash},
-			"filesize": {filesize},
+			"username": {config.Username},
+			"token":    {config.Token},
+			"filehash": {config.Mpfilehash},
+			"filesize": {config.Mpfilesize},
 		})
 
 	if err != nil {
@@ -115,19 +108,19 @@ func main() {
 
 	// 3. 请求分块上传接口
 
-	tURL := "http://127.0.0.1:8888/file/mpupload/uppart?" +
-		"username=admin&token=" + token + "&uploadid=" + uploadID
-	multipartUpload(filename, tURL, chunkSize)
+	tURL := config.MpcompURL + "?" +
+		"username=admin&token=" + config.Token + "&uploadid=" + uploadID
+	multipartUpload(config.Mpfilename, tURL, chunkSize)
 
 	// 4. 请求分块完成接口
 	resp, err = http.PostForm(
-		"http://127.0.0.1:8888/file/mpupload/complete",
+		config.MpcompURL,
 		url.Values{
-			"username": {username},
-			"token":    {token},
-			"filehash": {filehash},
-			"filesize": {filesize},
-			"filename": {filename},
+			"username": {config.Username},
+			"token":    {config.Token},
+			"filehash": {config.Mpfilehash},
+			"filesize": {config.Mpfilesize},
+			"filename": {config.Mpfilename},
 			"uploadid": {uploadID},
 		})
 

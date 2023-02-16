@@ -8,8 +8,21 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// 拦截器模式
-// 验证token
+// token验证
+func IsTokenValid(username, token string) bool {
+	// 判断token长度是否是40
+	if len(token) < 40 {
+		return false
+	}
+
+	// 判断token是否过期
+	// 判断token是否在db中
+	// 对比token
+
+	return true
+}
+
+// 拦截器
 func AuthInterceptor() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		username := c.Request.FormValue("username")

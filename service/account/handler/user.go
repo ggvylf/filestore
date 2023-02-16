@@ -50,8 +50,8 @@ func (u *User) Signin(ctx context.Context, req *proto.ReqSignin, resp *proto.Res
 	encpwd := util.Sha1([]byte(passwd + config.PasswordSalt))
 
 	// 从db校验用户名密码
-	pwdChecked, err := dbcli.UserSignin(username, encpwd)
-	if err != nil || !pwdChecked.Suc {
+	dbResp, err := dbcli.UserSignin(username, encpwd)
+	if err != nil || !dbResp.Suc {
 		resp.Code = common.StatusLoginFailed
 		return nil
 	}

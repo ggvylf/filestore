@@ -32,7 +32,7 @@ func main() {
 	// 初始化服务
 	service.Init()
 
-	// 初始化db客户端
+	// 初始化dbproxy的rpc clinet
 	dbproxy.Init(service)
 
 	// 注册服务到注册中心

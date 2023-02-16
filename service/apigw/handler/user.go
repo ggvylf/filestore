@@ -1,15 +1,68 @@
 package handler
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
+	cmn "github.com/ggvylf/filestore/common"
 	"github.com/ggvylf/filestore/config"
-	dblayer "github.com/ggvylf/filestore/db"
+
 	"github.com/ggvylf/filestore/util"
 	"github.com/gin-gonic/gin"
+	"github.com/go-micro/plugins/v4/wrapper/breaker/hystrix"
+	ratelimit "github.com/go-micro/plugins/v4/wrapper/ratelimiter/ratelimit"
+	ratelimit2 "github.com/juju/ratelimit"
+	"go-micro.dev/v4"
+
+	userProto "github.com/ggvylf/filestore/service/account/proto"
+	dlProto "github.com/ggvylf/filestore/service/download/proto"
+	upProto "github.com/ggvylf/filestore/service/upload/proto"
 )
+
+var (
+	userCli userProto.UserService
+	upCli   upProto.UploadService
+	dlCli   dlProto.DownloadService
+)
+
+func init() {
+	// 配置请求容量及qps
+	// 总量1000 qps 100
+	bRate := ratelimit2.NewBucketWithRate(100, 1000)
+
+	service := micro.NewService(
+		micro.Flags(cmn.CustomFlags...),
+
+		//加入限流功能, false为不等待(超限即返回请求失败)
+		micro.WrapClient(ratelimit.NewClientWrapper(bRate, false)),
+
+		// 加入熔断功能, 处理rpc调用失败的情况(cirucuit breaker)
+		micro.WrapClient(hystrix.NewClientWrapper()),
+	)
+	// 初始化， 解析命令行参数等
+	service.Init()
+
+	// 创建rpc客户端
+	cli := service.Client()
+	// tracer, err := tracing.Init("apigw service", "<jaeger-agent-host>")
+	// if err != nil {
+	// 	log.Println(err.Error())
+	// } else {
+	// 	cli = client.NewClient(
+	// 		client.Wrap(mopentracing.NewClientWrapper(tracer)),
+	// 	)
+	// }
+
+	// 初始化一个account服务的客户端
+	userCli = userProto.NewUserService("go.micro.service.user", cli)
+	// 初始化一个upload服务的客户端
+	upCli = upProto.NewUploadService("go.micro.service.upload", cli)
+	// 初始化一个download服务的客户端
+	dlCli = dlProto.NewDownloadService("go.micro.service.download", cli)
+}
 
 // 用户注册
 func UserSignUpGet(c *gin.Context) {
@@ -33,19 +86,22 @@ func UserSignUpPost(c *gin.Context) {
 	// 加密密码
 	encpwd := util.Sha1([]byte(passwd + config.PasswordSalt))
 
-	// 用户名 密码写入数据库
-	suc := dblayer.UserSignup(username, encpwd)
-	if suc {
-		c.JSON(http.StatusOK, gin.H{
-			"msg":  "user signup ok!",
-			"code": 0,
-		})
-	} else {
-		c.JSON(http.StatusOK, gin.H{
-			"msg":  "user signup failed",
-			"code": -2,
-		})
+	// 调用account的rpc服务
+	resp, err := userCli.Signup(context.TODO(), &userProto.ReqSignup{
+		Username: username,
+		Password: encpwd,
+	})
+
+	if err != nil {
+		log.Println(err.Error())
+		c.Status(http.StatusInternalServerError)
+		return
 	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code": resp.Code,
+		"msg":  resp.Message,
+	})
 
 }
 
@@ -60,43 +116,56 @@ func UserSigninPost(c *gin.Context) {
 	encpwd := util.Sha1([]byte(passwd + config.PasswordSalt))
 
 	// 从db校验用户名密码
-	pwdChecked := dblayer.UserSignin(username, encpwd)
-	if !pwdChecked {
-		c.JSON(http.StatusOK, gin.H{
-			"msg":  "username or password check error!",
-			"code": -2,
+	resp, err := userCli.Signin(context.TODO(), &userProto.ReqSignin{
+		Username: username,
+		Password: encpwd,
+	})
+
+	if err != nil {
+		log.Println(err.Error())
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	if resp.Code != cmn.StatusOK {
+		c.JSON(200, gin.H{
+			"msg":  "登录失败",
+			"code": resp.Code,
 		})
 		return
 	}
 
-	// 生成token
-	token := GenToken(username)
+	// // 动态获取上传入口地址
+	// upEntryResp, err := upCli.UploadEntry(context.TODO(), &upProto.ReqEntry{})
+	// if err != nil {
+	// 	log.Println(err.Error())
+	// } else if upEntryResp.Code != cmn.StatusOK {
+	// 	log.Println(upEntryResp.Message)
+	// }
 
-	// 更新token库
-	suc := dblayer.UpdateToken(username, token)
-	if !suc {
-		c.JSON(http.StatusOK, gin.H{
-			"msg":  "token update failed",
-			"code": -2,
-		})
-		return
-	}
+	// // 动态获取下载入口地址
+	// dlEntryResp, err := dlCli.DownloadEntry(context.TODO(), &dlProto.ReqEntry{})
+	// if err != nil {
+	// 	log.Println(err.Error())
+	// } else if dlEntryResp.Code != cmn.StatusOK {
+	// 	log.Println(dlEntryResp.Message)
+	// }
 
 	// 登录成功后跳转到主页
-	resp := util.RespMsg{
-		Code: 0,
-		Msg:  "OK",
+	cliResp := util.RespMsg{
+		Code: int(http.StatusOK),
+		Msg:  "登录成功",
 		Data: data{
 			Location:      "http://" + c.Request.Host + "/static/view/home.html",
 			Username:      username,
-			Token:         token,
+			Token:         resp.Token,
 			DownloadEntry: config.DownloadLBHost,
 			UploadEntry:   config.UploadLBHost,
 		},
 	}
 
 	// c.Data(http.StatusOK, "application/json", resp.JSONBytes())
-	c.JSON(http.StatusOK, resp)
+	c.JSON(http.StatusOK, cliResp)
 
 }
 
@@ -122,32 +191,24 @@ func UserInfoHandler(c *gin.Context) {
 
 	username := c.Request.FormValue("username")
 
-	// 查询db
-	user, err := dblayer.GetUserInfo(username)
+	rpcResp, err := userCli.UserInfo(context.TODO(), &userProto.ReqUserInfo{
+		Username: username,
+	})
+
 	if err != nil {
-		c.JSON(http.StatusForbidden, "")
+		log.Println(err.Error())
+		c.Status(http.StatusInternalServerError)
 		return
 	}
 
-	resp := util.RespMsg{
+	cliResp := util.RespMsg{
 		Code: 0,
 		Msg:  "ok",
-		Data: user,
+		Data: gin.H{
+			"Username":   username,
+			"SignupAt":   rpcResp.SignupAt,
+			"LastActive": rpcResp.LastActiveAt,
+		},
 	}
-
-	c.JSON(http.StatusOK, resp)
-}
-
-// token 验证
-func IsTokenValid(username, token string) bool {
-	// 判断token长度是否是40
-	if len(token) < 40 {
-		return false
-	}
-
-	// 判断token是否过期
-	// 判断token是否在db中
-	// 对比token
-
-	return true
+	c.JSON(http.StatusOK, cliResp)
 }

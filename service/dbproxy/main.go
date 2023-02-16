@@ -8,7 +8,6 @@ import (
 
 	dbProxy "github.com/ggvylf/filestore/service/dbproxy/proto"
 
-	dbConn "github.com/ggvylf/filestore/service/dbproxy/conn"
 	"github.com/go-micro/plugins/v4/registry/consul"
 	"go-micro.dev/v4"
 	"go-micro.dev/v4/registry"
@@ -27,9 +26,6 @@ func startRpcService() {
 	)
 
 	service.Init()
-
-	// 初始化db连接
-	dbConn.InitDBConn()
 
 	dbProxy.RegisterDBProxyServiceHandler(service.Server(), new(handler.DBProxy))
 	if err := service.Run(); err != nil {

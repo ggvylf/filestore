@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -12,6 +14,7 @@ import (
 	dblayer "github.com/ggvylf/filestore/db"
 	"github.com/ggvylf/filestore/meta"
 	"github.com/ggvylf/filestore/mq"
+	userProto "github.com/ggvylf/filestore/service/account/proto"
 	store "github.com/ggvylf/filestore/store/minio"
 	"github.com/ggvylf/filestore/util"
 	"github.com/gin-gonic/gin"
@@ -132,20 +135,24 @@ func GetFmListHandler(c *gin.Context) {
 	// fmList := meta.GetFmList()
 
 	username := c.Request.FormValue("username")
-	limit, _ := strconv.Atoi(c.Request.FormValue("limit"))
+	limitCnt, _ := strconv.Atoi(c.Request.FormValue("limit"))
 
-	fmList, err := dblayer.GetUserFileMetas(username, limit)
+	rpcResp, err := userCli.UserFilesList(context.TODO(), &userProto.ReqUserFile{
+		Username: username,
+		Limit:    int32(limitCnt),
+	})
+
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, "")
+		log.Println(err.Error())
+		c.Status(http.StatusInternalServerError)
 		return
 	}
 
-	// data, err := json.Marshal(fmList)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, "")
-		return
+	if len(rpcResp.FileData) <= 0 {
+		rpcResp.FileData = []byte("[]")
 	}
-	c.JSON(http.StatusOK, fmList)
+
+	c.JSON(http.StatusOK, rpcResp.FileData)
 
 }
 
@@ -210,6 +217,7 @@ func FmUpdateHandler(c *gin.Context) {
 	fileHash := c.Request.FormValue("filehash")
 	opType := c.Request.FormValue("op")
 	newFileName := c.Request.FormValue("filename")
+	username := c.Request.FormValue("username")
 
 	// 判断optype
 	if opType != "0" {
@@ -217,21 +225,23 @@ func FmUpdateHandler(c *gin.Context) {
 		return
 	}
 
-	// 更新tbl_file
-	suc := meta.UpdateFmFilename(fileHash, newFileName)
-	if !suc {
-		c.Writer.WriteHeader(http.StatusInternalServerError)
+	// 重命名文件
+	rpcResp, err := userCli.UserFileRename(context.TODO(), &userProto.ReqUserFileRename{
+		Username:    username,
+		Filehash:    fileHash,
+		NewFileName: newFileName,
+	})
+	if err != nil {
+		log.Println(err.Error())
+		c.Status(http.StatusInternalServerError)
 		return
 	}
 
-	// 更新tbl_user_file
-	suc = dblayer.UpdateUserFilename(fileHash, newFileName)
-	if !suc {
-		c.Writer.WriteHeader(http.StatusInternalServerError)
-		return
+	if len(rpcResp.FileData) <= 0 {
+		rpcResp.FileData = []byte("[]")
 	}
 
-	c.JSON(http.StatusOK, "重命名成功")
+	c.JSON(http.StatusOK, rpcResp.FileData)
 
 }
 

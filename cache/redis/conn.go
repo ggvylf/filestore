@@ -18,6 +18,7 @@ var (
 func init() {
 
 	pool = newPool()
+
 }
 
 func RedisPool() *redis.Pool {

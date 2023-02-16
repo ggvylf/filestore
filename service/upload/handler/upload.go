@@ -13,7 +13,6 @@ import (
 	cfg "github.com/ggvylf/filestore/config"
 	"github.com/ggvylf/filestore/mq"
 	dbcli "github.com/ggvylf/filestore/service/dbproxy/client"
-	"github.com/ggvylf/filestore/service/dbproxy/orm"
 	store "github.com/ggvylf/filestore/store/minio"
 	"github.com/ggvylf/filestore/util"
 	"github.com/gin-gonic/gin"
@@ -206,7 +205,7 @@ func TryFastUploadHandler(c *gin.Context) {
 	}
 
 	// 4. 上传过则将文件信息写入用户文件表， 返回成功
-	fmeta := dbcli.TableFileToFileMeta(fileMetaResp.Data.(orm.TableFile))
+	fmeta := dbcli.TableFileToFileMeta(dbcli.ToTableFile(fileMetaResp.Data))
 	fmeta.FileName = filename
 	upRes, err := dbcli.OnUserFileUploadFinished(username, fmeta)
 	if err == nil && upRes.Suc {

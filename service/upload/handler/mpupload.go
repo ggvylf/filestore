@@ -50,6 +50,10 @@ func InitialMultipartUploadHandler(c *gin.Context) {
 
 	// 2. 获得redis的一个连接
 	rConn := rPool.RedisPool().Get()
+	if rConn.Err() != nil {
+		log.Println("redis conn failed,err=", rConn.Err().Error())
+		return
+	}
 	defer rConn.Close()
 
 	// 3. 生成分块上传的初始化信息
@@ -113,7 +117,7 @@ func UploadPartHandler(c *gin.Context) {
 	rConn.Do("HSET", "MP_"+uploadID, "chkidx_"+chunkIndex, 1)
 
 	// 返回处理结果
-	c.Data(http.StatusOK, "", util.NewRespMsg(0, "ok", nil).JSONBytes())
+	c.Data(http.StatusOK, "", util.NewRespMsg(0, "upart ok", nil).JSONBytes())
 
 }
 
@@ -172,9 +176,9 @@ func CompleteUploadHandler(c *gin.Context) {
 	// 合并分块
 	fpath := config.TempPartRootDir + "/" + uploadid + "/"
 	_, fname := path.Split(filename)
-	fileaddr := fmt.Sprintf("/tmp/" + fname)
+	destfile := fmt.Sprintf("/tmp/" + fname)
 
-	fd, _ := os.OpenFile(fileaddr, os.O_CREATE|os.O_WRONLY, 0644)
+	fd, _ := os.OpenFile(destfile, os.O_CREATE|os.O_WRONLY, 0644)
 	defer fd.Close()
 
 	files, _ := filepath.Glob(fpath + "*")
@@ -210,7 +214,7 @@ func CompleteUploadHandler(c *gin.Context) {
 		FileSha1: filehash,
 		FileName: name,
 		FileSize: int64(fsize),
-		Location: fileaddr,
+		Location: destfile,
 	}
 
 	// 更新tbl_file
@@ -231,13 +235,16 @@ func CompleteUploadHandler(c *gin.Context) {
 		return
 	}
 
+	// 删除redis中的key
+	rConn.Do("DEL", "MP_"+uploadid)
+
 	// 拼接mq信息
 	bucket := config.OSSBucket
 	ossName := config.OSSRootDir + "/" + filehash
 
 	msgdata := mq.TransferData{
 		FileHash:      filehash,
-		CurLocation:   fileaddr,
+		CurLocation:   destfile,
 		DestLocation:  ossName,
 		DestStoreType: common.StoreOSS,
 		FileSize:      int64(fsize),

@@ -5,15 +5,14 @@ import (
 	"time"
 
 	cfg "github.com/ggvylf/filestore/service/download/config"
-	dlHandler "github.com/ggvylf/filestore/service/download/handler"
 	"github.com/ggvylf/filestore/service/download/route"
 	"github.com/go-micro/plugins/v4/registry/consul"
 	"go-micro.dev/v4"
 	"go-micro.dev/v4/registry"
 
-	dlProto "github.com/ggvylf/filestore/service/download/proto"
-
 	dbproxy "github.com/ggvylf/filestore/service/dbproxy/client"
+	dlRpc "github.com/ggvylf/filestore/service/download/handler"
+	dlProto "github.com/ggvylf/filestore/service/download/proto"
 )
 
 func startRpcService() {
@@ -33,7 +32,8 @@ func startRpcService() {
 	// 初始化dbproxy client
 	dbproxy.Init(service)
 
-	dlProto.RegisterDownloadServiceHandler(service.Server(), new(dlHandler.Download))
+	// 注册服务到注册中心
+	dlProto.RegisterDownloadServiceHandler(service.Server(), new(dlRpc.Download))
 	if err := service.Run(); err != nil {
 		fmt.Println(err)
 	}

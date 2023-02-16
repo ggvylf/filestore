@@ -6,13 +6,13 @@ option go_package="../proto";
 
 service DownloadService {
     // 获取下载入口地址
-    rpc DownloadEntry(ReqEntry) returns (RespEntry) {}
+    rpc DownloadEntry(ReqDownloadEntry) returns (RespDownloadEntry) {}
 }
 
-message ReqEntry {
+message ReqDownloadEntry{
 }
 
-message RespEntry {
+message RespDownloadEntry{
     int32 code = 1;
     string message = 2;
     string entry = 3;

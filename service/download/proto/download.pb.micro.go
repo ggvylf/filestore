@@ -37,7 +37,7 @@ func NewDownloadServiceEndpoints() []*api.Endpoint {
 
 type DownloadService interface {
 	// 获取下载入口地址
-	DownloadEntry(ctx context.Context, in *ReqEntry, opts ...client.CallOption) (*RespEntry, error)
+	DownloadEntry(ctx context.Context, in *ReqDownloadEntry, opts ...client.CallOption) (*RespDownloadEntry, error)
 }
 
 type downloadService struct {
@@ -52,9 +52,9 @@ func NewDownloadService(name string, c client.Client) DownloadService {
 	}
 }
 
-func (c *downloadService) DownloadEntry(ctx context.Context, in *ReqEntry, opts ...client.CallOption) (*RespEntry, error) {
+func (c *downloadService) DownloadEntry(ctx context.Context, in *ReqDownloadEntry, opts ...client.CallOption) (*RespDownloadEntry, error) {
 	req := c.c.NewRequest(c.name, "DownloadService.DownloadEntry", in)
-	out := new(RespEntry)
+	out := new(RespDownloadEntry)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
 		return nil, err
@@ -66,12 +66,12 @@ func (c *downloadService) DownloadEntry(ctx context.Context, in *ReqEntry, opts 
 
 type DownloadServiceHandler interface {
 	// 获取下载入口地址
-	DownloadEntry(context.Context, *ReqEntry, *RespEntry) error
+	DownloadEntry(context.Context, *ReqDownloadEntry, *RespDownloadEntry) error
 }
 
 func RegisterDownloadServiceHandler(s server.Server, hdlr DownloadServiceHandler, opts ...server.HandlerOption) error {
 	type downloadService interface {
-		DownloadEntry(ctx context.Context, in *ReqEntry, out *RespEntry) error
+		DownloadEntry(ctx context.Context, in *ReqDownloadEntry, out *RespDownloadEntry) error
 	}
 	type DownloadService struct {
 		downloadService
@@ -84,6 +84,6 @@ type downloadServiceHandler struct {
 	DownloadServiceHandler
 }
 
-func (h *downloadServiceHandler) DownloadEntry(ctx context.Context, in *ReqEntry, out *RespEntry) error {
+func (h *downloadServiceHandler) DownloadEntry(ctx context.Context, in *ReqDownloadEntry, out *RespDownloadEntry) error {
 	return h.DownloadServiceHandler.DownloadEntry(ctx, in, out)
 }

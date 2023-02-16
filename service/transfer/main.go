@@ -34,6 +34,7 @@ func startTransferService() {
 }
 
 // 微服务框架
+// transfer从mq消费，没有rpc调用
 func StartRpcService() {
 
 	consul := consul.NewRegistry(

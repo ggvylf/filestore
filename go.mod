@@ -6,15 +6,17 @@ require (
 	github.com/garyburd/redigo v1.6.4
 	github.com/gin-contrib/cors v1.4.0
 	github.com/gin-gonic/gin v1.8.2
-	github.com/go-delve/delve v1.20.1
 	github.com/go-micro/plugins/v4/registry/consul v1.2.0
+	github.com/go-micro/plugins/v4/wrapper/breaker/hystrix v1.2.0
+	github.com/go-micro/plugins/v4/wrapper/ratelimiter/ratelimit v1.2.0
 	github.com/go-sql-driver/mysql v1.7.0
 	github.com/gomodule/redigo v1.8.9
 	github.com/json-iterator/go v1.1.12
-	github.com/micro/cli v0.2.0
+	github.com/juju/ratelimit v1.0.2
 	github.com/minio/minio-go/v7 v7.0.47
 	github.com/mitchellh/mapstructure v1.3.3
 	github.com/rabbitmq/amqp091-go v1.6.0
+	github.com/urfave/cli/v2 v2.24.3
 	go-micro.dev/v4 v4.9.0
 	google.golang.org/protobuf v1.28.1
 )
@@ -23,10 +25,10 @@ require (
 	github.com/Microsoft/go-winio v0.5.0 // indirect
 	github.com/ProtonMail/go-crypto v0.0.0-20210428141323-04723f9f07d7 // indirect
 	github.com/acomagu/bufpipe v1.0.3 // indirect
+	github.com/afex/hystrix-go v0.0.0-20180502004556-fa1af6a1f4f5 // indirect
 	github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da // indirect
 	github.com/bitly/go-simplejson v0.5.0 // indirect
-	github.com/cilium/ebpf v0.7.0 // indirect
-	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/emirpasic/gods v1.12.0 // indirect
 	github.com/evanphx/json-patch/v5 v5.5.0 // indirect
@@ -76,14 +78,12 @@ require (
 	github.com/pelletier/go-toml/v2 v2.0.6 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rs/xid v1.4.0 // indirect
-	github.com/russross/blackfriday/v2 v2.0.1 // indirect
+	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sergi/go-diff v1.1.0 // indirect
-	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/ugorji/go/codec v1.2.7 // indirect
-	github.com/urfave/cli/v2 v2.3.0 // indirect
 	github.com/xanzy/ssh-agent v0.3.0 // indirect
-	golang.org/x/arch v0.0.0-20190927153633-4e8777c89be4 // indirect
+	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa // indirect
 	golang.org/x/net v0.4.0 // indirect
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
