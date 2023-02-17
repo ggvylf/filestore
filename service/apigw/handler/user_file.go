@@ -152,7 +152,7 @@ func GetFmListHandler(c *gin.Context) {
 		rpcResp.FileData = []byte("[]")
 	}
 
-	c.JSON(http.StatusOK, rpcResp.FileData)
+	c.Data(http.StatusOK, "application/json", rpcResp.FileData)
 
 }
 

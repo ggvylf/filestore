@@ -83,13 +83,10 @@ func UserSignUpPost(c *gin.Context) {
 		return
 	}
 
-	// 加密密码
-	encpwd := util.Sha1([]byte(passwd + config.PasswordSalt))
-
 	// 调用account的rpc服务
 	resp, err := userCli.Signup(context.TODO(), &userProto.ReqSignup{
 		Username: username,
-		Password: encpwd,
+		Password: passwd,
 	})
 
 	if err != nil {
@@ -113,21 +110,24 @@ func UserSigninGet(c *gin.Context) {
 func UserSigninPost(c *gin.Context) {
 	username := c.Request.FormValue("username")
 	passwd := c.Request.FormValue("password")
-	encpwd := util.Sha1([]byte(passwd + config.PasswordSalt))
 
-	// 从db校验用户名密码
-	resp, err := userCli.Signin(context.TODO(), &userProto.ReqSignin{
-		Username: username,
-		Password: encpwd,
-	})
-
-	if err != nil {
-		log.Println(err.Error())
-		c.Status(http.StatusInternalServerError)
+	// 对用户名和密码做简单的校验
+	if len(username) < 3 || len(passwd) < 5 {
+		c.JSON(http.StatusOK, gin.H{
+			"msg":  "invalid parameter",
+			"code": -1,
+		})
 		return
 	}
 
-	if resp.Code != cmn.StatusOK {
+	// rpc调用登录服务
+	resp, err := userCli.Signin(context.TODO(), &userProto.ReqSignin{
+		Username: username,
+		Password: passwd,
+	})
+
+	if err != nil || resp.Code != cmn.StatusOK {
+		log.Println(err.Error())
 		c.JSON(200, gin.H{
 			"msg":  "登录失败",
 			"code": resp.Code,

@@ -23,8 +23,8 @@ check_process() {
 # 编译service可执行文件
 build_service() {
     go build -o ${workpath}/service/bin/$1 ${workpath}/service/$1/main.go
-    resbin=`ls service/bin/ | grep $1`
-    echo -e "\033[32m 编译完成: \033[0m service/bin/$resbin"
+
+    echo -e "\033[32m 编译完成: \033[0m service/bin/$1"
 }
 
 # 启动service
@@ -59,5 +59,8 @@ for service in $services
 do
     run_service $service
 done
+
+pkill apigw && sleep 3 &&
+cd ${workpath}/service/bin/ &&  nohup ./apigw >> $logpath/apigw.log 2>&1 &
 
 echo '微服务启动完毕.'

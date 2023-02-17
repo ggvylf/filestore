@@ -2,10 +2,12 @@ package handler
 
 import (
 	"context"
+	"log"
 
 	"github.com/ggvylf/filestore/common"
 	"github.com/ggvylf/filestore/config"
-	dbcli "github.com/ggvylf/filestore/service/dbproxy/client"
+
+	dbCli "github.com/ggvylf/filestore/service/dbproxy/client"
 
 	proto "github.com/ggvylf/filestore/service/account/proto"
 	"github.com/ggvylf/filestore/util"
@@ -31,8 +33,10 @@ func (u *User) Signup(ctx context.Context, req *proto.ReqSignup, resp *proto.Res
 	encpwd := util.Sha1([]byte(passwd + config.PasswordSalt))
 
 	// 用户名 密码写入数据库
-	res, err := dbcli.UserSignup(username, encpwd)
+	res, err := dbCli.UserSignup(username, encpwd)
 	if err != nil || !res.Suc {
+		log.Println(err.Error())
+		log.Println(res.Msg)
 		resp.Code = common.StatusRegisterFailed
 		resp.Message = "用户注册失败"
 
@@ -50,9 +54,12 @@ func (u *User) Signin(ctx context.Context, req *proto.ReqSignin, resp *proto.Res
 	encpwd := util.Sha1([]byte(passwd + config.PasswordSalt))
 
 	// 从db校验用户名密码
-	dbResp, err := dbcli.UserSignin(username, encpwd)
+	dbResp, err := dbCli.UserSignin(username, encpwd)
 	if err != nil || !dbResp.Suc {
+		log.Println(err.Error())
+		log.Println(dbResp.Msg)
 		resp.Code = common.StatusLoginFailed
+		resp.Message = "校验用户名密码失败"
 		return nil
 	}
 
@@ -60,10 +67,12 @@ func (u *User) Signin(ctx context.Context, req *proto.ReqSignin, resp *proto.Res
 	token := util.GenToken(username)
 
 	// 更新token库
-	res, err := dbcli.UpdateToken(username, token)
+	res, err := dbCli.UpdateToken(username, token)
 	if err != nil || !res.Suc {
-
+		log.Println(err.Error())
+		log.Println(dbResp.Msg)
 		resp.Code = common.StatusServerError
+		resp.Message = "更新token失败"
 		return nil
 	}
 
@@ -77,15 +86,16 @@ func (u *User) Signin(ctx context.Context, req *proto.ReqSignin, resp *proto.Res
 func (u *User) UserInfo(ctx context.Context, req *proto.ReqUserInfo, resp *proto.RespUserInfo) error {
 
 	// 查询db
-	res, err := dbcli.GetUserInfo(req.Username)
+	res, err := dbCli.GetUserInfo(req.Username)
 	if err != nil || !res.Suc {
+		log.Println(err.Error())
 		resp.Code = common.StatusUserNotExists
 		resp.Message = "用户不存在"
 		return nil
 	}
 
 	// 序列化用户信息
-	user := dbcli.ToTableUser(res.Data)
+	user := dbCli.ToTableUser(res.Data)
 
 	resp.Code = common.StatusOK
 	resp.Username = user.Username

@@ -1,10 +1,10 @@
-package main
+package config
 
 var (
 
 	// public
 	Username = "admin"
-	Token    = "1db7c6ae348367dcd3fbcc26b80c456863ec89b6"
+	Token    = "06805bef4b8ddf7c3ea94d3fc12b8a8c63ef77b5"
 
 	//fastupload
 	FasttargetURL = "http://127.0.0.1:28080/file/fastupload"

@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"log"
 
 	"github.com/ggvylf/filestore/common"
 	proto "github.com/ggvylf/filestore/service/account/proto"
@@ -14,6 +15,7 @@ import (
 func (u *User) UserFilesList(ctx context.Context, req *proto.ReqUserFile, res *proto.RespUserFile) error {
 	dbResp, err := dbcli.QueryUserFileMetas(req.Username, int(req.Limit))
 	if err != nil || !dbResp.Suc {
+		log.Println(err.Error())
 		res.Code = common.StatusServerError
 		return err
 	}
@@ -22,6 +24,7 @@ func (u *User) UserFilesList(ctx context.Context, req *proto.ReqUserFile, res *p
 	userFiles := dbcli.ToTableUserFiles(dbResp.Data)
 	data, err := json.Marshal(userFiles)
 	if err != nil {
+		log.Println(err.Error())
 		res.Code = common.StatusServerError
 		return nil
 	}
@@ -34,6 +37,7 @@ func (u *User) UserFilesList(ctx context.Context, req *proto.ReqUserFile, res *p
 func (u *User) UserFileRename(ctx context.Context, req *proto.ReqUserFileRename, res *proto.RespUserFileRename) error {
 	dbResp, err := dbcli.RenameFileName(req.Username, req.Filehash, req.NewFileName)
 	if err != nil || !dbResp.Suc {
+		log.Println(err.Error())
 		res.Code = common.StatusServerError
 		return err
 	}
@@ -41,6 +45,7 @@ func (u *User) UserFileRename(ctx context.Context, req *proto.ReqUserFileRename,
 	userFiles := dbcli.ToTableUserFiles(dbResp.Data)
 	data, err := json.Marshal(userFiles)
 	if err != nil {
+		log.Println(err.Error())
 		res.Code = common.StatusServerError
 		return nil
 	}
