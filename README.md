@@ -1,6 +1,9 @@
 ## 代码来源
 https://github.com/samtake/filestore-server/
 
+## 已知bug
+用户登录页面 输错密码 会panic
+
 ## 关于应用启动
 
 - 在加入rabbitMQ实现文件异步转移之前，启动方式：

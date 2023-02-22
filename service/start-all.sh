@@ -60,7 +60,7 @@ do
     run_service $service
 done
 
-pkill apigw && sleep 3 &&
+pkill -9 apigw && sleep 3 &&
 cd ${workpath}/service/bin/ &&  nohup ./apigw >> $logpath/apigw.log 2>&1 &
 
 echo '微服务启动完毕.'

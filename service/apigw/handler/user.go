@@ -12,10 +12,9 @@ import (
 
 	"github.com/ggvylf/filestore/util"
 	"github.com/gin-gonic/gin"
-	"github.com/go-micro/plugins/v4/wrapper/breaker/hystrix"
-	ratelimit "github.com/go-micro/plugins/v4/wrapper/ratelimiter/ratelimit"
-	ratelimit2 "github.com/juju/ratelimit"
+	"github.com/go-micro/plugins/v4/registry/consul"
 	"go-micro.dev/v4"
+	"go-micro.dev/v4/registry"
 
 	userProto "github.com/ggvylf/filestore/service/account/proto"
 	dlProto "github.com/ggvylf/filestore/service/download/proto"
@@ -31,16 +30,21 @@ var (
 func init() {
 	// 配置请求容量及qps
 	// 总量1000 qps 100
-	bRate := ratelimit2.NewBucketWithRate(100, 1000)
+	// bRate := ratelimit2.NewBucketWithRate(100, 1000)
+
+	consul := consul.NewRegistry(
+		registry.Addrs("127.0.0.1:8500"),
+	)
 
 	service := micro.NewService(
 		micro.Flags(cmn.CustomFlags...),
+		micro.Registry(consul),
 
-		//加入限流功能, false为不等待(超限即返回请求失败)
-		micro.WrapClient(ratelimit.NewClientWrapper(bRate, false)),
+	// 	//加入限流功能, false为不等待(超限即返回请求失败)
+	// 	micro.WrapClient(ratelimit.NewClientWrapper(bRate, false)),
 
-		// 加入熔断功能, 处理rpc调用失败的情况(cirucuit breaker)
-		micro.WrapClient(hystrix.NewClientWrapper()),
+	// 	// 加入熔断功能, 处理rpc调用失败的情况(cirucuit breaker)
+	// 	micro.WrapClient(hystrix.NewClientWrapper()),
 	)
 	// 初始化， 解析命令行参数等
 	service.Init()
@@ -115,7 +119,7 @@ func UserSigninPost(c *gin.Context) {
 	if len(username) < 3 || len(passwd) < 5 {
 		c.JSON(http.StatusOK, gin.H{
 			"msg":  "invalid parameter",
-			"code": -1,
+			"code": cmn.StatusParamInvalid,
 		})
 		return
 	}
@@ -128,8 +132,8 @@ func UserSigninPost(c *gin.Context) {
 
 	if err != nil || resp.Code != cmn.StatusOK {
 		log.Println(err.Error())
-		c.JSON(200, gin.H{
-			"msg":  "登录失败",
+		c.JSON(http.StatusOK, gin.H{
+			"msg":  resp.Message,
 			"code": resp.Code,
 		})
 		return

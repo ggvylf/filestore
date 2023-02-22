@@ -7,12 +7,9 @@ require (
 	github.com/gin-contrib/cors v1.4.0
 	github.com/gin-gonic/gin v1.8.2
 	github.com/go-micro/plugins/v4/registry/consul v1.2.0
-	github.com/go-micro/plugins/v4/wrapper/breaker/hystrix v1.2.0
-	github.com/go-micro/plugins/v4/wrapper/ratelimiter/ratelimit v1.2.0
 	github.com/go-sql-driver/mysql v1.7.0
 	github.com/gomodule/redigo v1.8.9
 	github.com/json-iterator/go v1.1.12
-	github.com/juju/ratelimit v1.0.2
 	github.com/minio/minio-go/v7 v7.0.47
 	github.com/mitchellh/mapstructure v1.3.3
 	github.com/rabbitmq/amqp091-go v1.6.0
@@ -25,14 +22,13 @@ require (
 	github.com/Microsoft/go-winio v0.5.0 // indirect
 	github.com/ProtonMail/go-crypto v0.0.0-20210428141323-04723f9f07d7 // indirect
 	github.com/acomagu/bufpipe v1.0.3 // indirect
-	github.com/afex/hystrix-go v0.0.0-20180502004556-fa1af6a1f4f5 // indirect
 	github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da // indirect
 	github.com/bitly/go-simplejson v0.5.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/emirpasic/gods v1.12.0 // indirect
 	github.com/evanphx/json-patch/v5 v5.5.0 // indirect
-	github.com/fatih/color v1.9.0 // indirect
+	github.com/fatih/color v1.14.1 // indirect
 	github.com/felixge/httpsnoop v1.0.1 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
@@ -63,8 +59,8 @@ require (
 	github.com/klauspost/compress v1.15.9 // indirect
 	github.com/klauspost/cpuid/v2 v2.1.0 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
-	github.com/mattn/go-colorable v0.1.8 // indirect
-	github.com/mattn/go-isatty v0.0.16 // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/miekg/dns v1.1.43 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/minio/sha256-simd v1.0.0 // indirect
@@ -85,10 +81,10 @@ require (
 	github.com/xanzy/ssh-agent v0.3.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa // indirect
-	golang.org/x/net v0.4.0 // indirect
+	golang.org/x/net v0.6.0 // indirect
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
-	golang.org/x/sys v0.3.0 // indirect
-	golang.org/x/text v0.5.0 // indirect
+	golang.org/x/sys v0.5.0 // indirect
+	golang.org/x/text v0.7.0 // indirect
 	gopkg.in/ini.v1 v1.66.6 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect

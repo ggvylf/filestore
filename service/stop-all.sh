@@ -28,3 +28,4 @@ for sname in $services
 do
     stop_process $sname
 done
+pkill -9 apigw
