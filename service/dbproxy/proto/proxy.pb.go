@@ -20,6 +20,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// 是否顺序执行的tag和请求的参数
 type SingleAction struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

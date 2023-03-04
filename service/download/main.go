@@ -7,6 +7,7 @@ import (
 	cfg "github.com/ggvylf/filestore/service/download/config"
 	"github.com/ggvylf/filestore/service/download/route"
 	"github.com/go-micro/plugins/v4/registry/consul"
+	"github.com/go-micro/plugins/v4/server/grpc"
 	"go-micro.dev/v4"
 	"go-micro.dev/v4/registry"
 
@@ -22,6 +23,7 @@ func startRpcService() {
 	)
 
 	service := micro.NewService(
+		micro.Server(grpc.NewServer()),
 		micro.Name("go.micro.service.download"), // 在注册中心中的服务名称
 		micro.RegisterTTL(time.Second*10),
 		micro.RegisterInterval(time.Second*5),
@@ -30,7 +32,7 @@ func startRpcService() {
 	service.Init()
 
 	// 初始化dbproxy client
-	dbproxy.Init(service)
+	dbproxy.Init()
 
 	// 注册服务到注册中心
 	dlProto.RegisterDownloadServiceHandler(service.Server(), new(dlRpc.Download))

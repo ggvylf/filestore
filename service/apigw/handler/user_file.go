@@ -139,7 +139,7 @@ func GetFmListHandler(c *gin.Context) {
 
 	rpcResp, err := userCli.UserFilesList(context.TODO(), &userProto.ReqUserFile{
 		Username: username,
-		Limit:    int32(limitCnt),
+		Limit:    int64(limitCnt),
 	})
 
 	if err != nil {

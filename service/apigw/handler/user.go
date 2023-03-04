@@ -12,6 +12,7 @@ import (
 
 	"github.com/ggvylf/filestore/util"
 	"github.com/gin-gonic/gin"
+	"github.com/go-micro/plugins/v4/client/grpc"
 	"github.com/go-micro/plugins/v4/registry/consul"
 	"go-micro.dev/v4"
 	"go-micro.dev/v4/registry"
@@ -37,6 +38,7 @@ func init() {
 	)
 
 	service := micro.NewService(
+		micro.Client(grpc.NewClient()),
 		micro.Flags(cmn.CustomFlags...),
 		micro.Registry(consul),
 
@@ -50,7 +52,7 @@ func init() {
 	service.Init()
 
 	// 创建rpc客户端
-	cli := service.Client()
+	// cli := service.Client()
 	// tracer, err := tracing.Init("apigw service", "<jaeger-agent-host>")
 	// if err != nil {
 	// 	log.Println(err.Error())
@@ -61,11 +63,11 @@ func init() {
 	// }
 
 	// 初始化一个account服务的客户端
-	userCli = userProto.NewUserService("go.micro.service.user", cli)
+	userCli = userProto.NewUserService("go.micro.service.user", service.Client())
 	// 初始化一个upload服务的客户端
-	upCli = upProto.NewUploadService("go.micro.service.upload", cli)
+	upCli = upProto.NewUploadService("go.micro.service.upload", service.Client())
 	// 初始化一个download服务的客户端
-	dlCli = dlProto.NewDownloadService("go.micro.service.download", cli)
+	dlCli = dlProto.NewDownloadService("go.micro.service.download", service.Client())
 }
 
 // 用户注册

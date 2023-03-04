@@ -9,6 +9,7 @@ import (
 	dbProxy "github.com/ggvylf/filestore/service/dbproxy/proto"
 
 	"github.com/go-micro/plugins/v4/registry/consul"
+	"github.com/go-micro/plugins/v4/server/grpc"
 	"go-micro.dev/v4"
 	"go-micro.dev/v4/registry"
 )
@@ -19,6 +20,7 @@ func startRpcService() {
 	)
 
 	service := micro.NewService(
+		micro.Server(grpc.NewServer()),
 		micro.Name("go.micro.service.dbproxy"), // 在注册中心中的服务名称
 		micro.RegisterTTL(time.Second*10),      // 声明超时时间, 避免consul不主动删掉已失去心跳的服务节点
 		micro.RegisterInterval(time.Second*5),

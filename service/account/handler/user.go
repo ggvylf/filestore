@@ -101,7 +101,7 @@ func (u *User) UserInfo(ctx context.Context, req *proto.ReqUserInfo, resp *proto
 	resp.Username = user.Username
 	resp.SignupAt = user.SignupAt
 	resp.LastActiveAt = user.LastActiveAt
-	resp.Status = int32(user.Status)
+	resp.Status = int64(user.Status)
 	// TODO: 需增加接口支持完善用户信息(email/phone等)
 	resp.Email = user.Email
 	resp.Phone = user.Phone

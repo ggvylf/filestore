@@ -6,7 +6,9 @@ require (
 	github.com/garyburd/redigo v1.6.4
 	github.com/gin-contrib/cors v1.4.0
 	github.com/gin-gonic/gin v1.8.2
+	github.com/go-micro/plugins/v4/client/grpc v1.1.0
 	github.com/go-micro/plugins/v4/registry/consul v1.2.0
+	github.com/go-micro/plugins/v4/server/grpc v1.2.0
 	github.com/go-sql-driver/mysql v1.7.0
 	github.com/gomodule/redigo v1.8.9
 	github.com/json-iterator/go v1.1.12
@@ -15,6 +17,7 @@ require (
 	github.com/rabbitmq/amqp091-go v1.6.0
 	github.com/urfave/cli/v2 v2.24.3
 	go-micro.dev/v4 v4.9.0
+	google.golang.org/grpc v1.42.0
 	google.golang.org/protobuf v1.28.1
 )
 
@@ -85,6 +88,7 @@ require (
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
 	golang.org/x/sys v0.5.0 // indirect
 	golang.org/x/text v0.7.0 // indirect
+	google.golang.org/genproto v0.0.0-20211020151524-b7c3a969101a // indirect
 	gopkg.in/ini.v1 v1.66.6 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
